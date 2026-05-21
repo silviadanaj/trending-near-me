@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Trending Near Me</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#4F46E5',
+                        secondary: '#10B981',
+                        dark: '#1F2937',
+                        light: '#F3F4F6'
+                    },
+                    fontFamily: { sans: ['Inter', 'sans-serif'] }
+                }
+            }
+        }
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; overflow: hidden; }
+        #map-container { height: calc(100vh - 64px); width: 100%; position: relative; }
+        #map { height: 100%; width: 100%; z-index: 1; }
+        .custom-div-icon { background: transparent; border: none; }
+        .map-marker { position: relative; cursor: pointer; transition: transform 0.2s ease; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; }
+        .map-marker:hover { transform: scale(1.1); }
+        .marker-pin { width: 30px; height: 30px; border-radius: 50% 50% 50% 0; position: absolute; transform: rotate(-45deg); box-shadow: -1px 1px 4px rgba(0,0,0,0.4); display: flex; align-items: center; justify-content: center; }
+        .marker-icon { transform: rotate(45deg); color: white; font-size: 14px; }
+        .marker-pulse { border-radius: 50%; height: 50px; width: 50px; position: absolute; z-index: -1; animation: pulsate 1.5s ease-out infinite; }
+        .marker-trend { position: absolute; top: -5px; right: -5px; background: #ef4444; color: white; border-radius: 50%; width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: bold; box-shadow: 0 2px 4px rgba(0,0,0,0.2); z-index: 15; border: 2px solid white; }
+        @keyframes pulsate { 0% { transform: scale(0.5); opacity: 0.8; } 100% { transform: scale(1.5); opacity: 0; } }
+        .user-location-marker { width: 20px; height: 20px; background-color: #3b82f6; border: 3px solid white; border-radius: 50%; box-shadow: 0 0 10px rgba(0,0,0,0.5); position: relative; }
+        .user-pulse { background: rgba(59, 130, 246, 0.4); animation: pulsate 2s ease-out infinite; width: 60px; height: 60px; border-radius: 50%; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: -1; }
+        #place-details-sheet { transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); transform: translateY(100%); }
+        #place-details-sheet.open { transform: translateY(0); }
+        .filter-btn.active { background-color: #4F46E5; color: white; border-color: #4F46E5; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        .ui-layer { z-index: 400; }
+        #ai-chat-window.open { transform: translateY(0); opacity: 1; pointer-events: auto; }
+        .typing-dot { animation: typing 1.4s infinite ease-in-out both; }
+        .typing-dot:nth-child(1) { animation-delay: -0.32s; }
+        .typing-dot:nth-child(2) { animation-delay: -0.16s; }
+        @keyframes typing { 0%, 80%, 100% { transform: scale(0); } 40% { transform: scale(1); } }
+    </style>
+</head>
+<body class="bg-gray-100 text-gray-800 flex flex-col h-screen">
+
+    <!-- App Header -->
+    <header class="bg-white shadow-sm relative h-16 flex items-center justify-between px-4 ui-layer">
+        <div class="flex items-center gap-2">
+            <div class="bg-indigo-100 text-indigo-600 p-2 rounded-lg">
+                <i class="fa-solid fa-map-location-dot"></i>
+            </div>
+            <h1 class="text-xl font-bold text-gray-900">Trending<span class="text-indigo-600">NearMe</span></h1>
+        </div>
+        <div class="flex items-center gap-3">
+            <button class="p-2 text-gray-500 hover:text-gray-900 rounded-full hover:bg-gray-100 transition" onclick="refreshData()">
+                <i class="fa-solid fa-rotate-right"></i>
+            </button>
+            <div class="w-8 h-8 rounded-full bg-indigo-500 text-white flex items-center justify-center font-bold shadow-sm cursor-pointer" onclick="locateUser()">
+                <i class="fa-solid fa-user"></i>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content Area -->
+    <main class="flex-1 relative flex flex-col">
+
+        <!-- Filters Overlay -->
+        <div class="absolute top-4 left-0 right-0 px-4 ui-layer pointer-events-none flex flex-col gap-3">
+
+            <!-- Vibe Selector -->
+            <div class="pointer-events-auto flex">
+                <div class="relative bg-white/95 backdrop-blur-sm rounded-full shadow-md p-1 border border-gray-200 flex items-center pr-4 pl-1 transition hover:shadow-lg">
+                    <div class="bg-gradient-to-br from-indigo-500 to-purple-600 text-white rounded-full w-8 h-8 flex items-center justify-center mr-2 shadow-sm">
+                        <i class="fa-solid fa-sparkles text-xs"></i>
+                    </div>
+                    <select id="vibe-select" onchange="changeVibe(this.value)" class="appearance-none bg-transparent text-gray-800 font-bold text-sm focus:outline-none cursor-pointer pr-5 w-32">
+                        <option value="any">Any Vibe</option>
+                        <option value="family">Family / Kids</option>
+                        <option value="date">Date Night</option>
+                        <option value="friends">With Friends</option>
+                        <option value="solo">Solo Time</option>
+                    </select>
+                    <i class="fa-solid fa-chevron-down absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 text-xs pointer-events-none"></i>
+                </div>
+            </div>
+
+            <!-- Category Filters -->
+            <div class="flex space-x-2 overflow-x-auto no-scrollbar pb-2 pointer-events-auto">
+                <button onclick="filterCategory('all')" id="filter-all" class="filter-btn active whitespace-nowrap px-4 py-2 bg-white text-gray-700 rounded-full shadow-md text-sm font-medium border border-gray-200 hover:bg-gray-50 transition flex items-center gap-2">
+                    <i class="fa-solid fa-fire text-red-500"></i> All
+                </button>
+                <button onclick="filterCategory('cafe')" id="filter-cafe" class="filter-btn whitespace-nowrap px-4 py-2 bg-white text-gray-700 rounded-full shadow-md text-sm font-medium border border-gray-200 hover:bg-gray-50 transition flex items-center gap-2">
+                    <i class="fa-solid fa-mug-hot text-amber-600"></i> Cafes
+                </button>
+                <button onclick="filterCategory('restaurant')" id="filter-restaurant" class="filter-btn whitespace-nowrap px-4 py-2 bg-white text-gray-700 rounded-full shadow-md text-sm font-medium border border-gray-200 hover:bg-gray-50 transition flex items-center gap-2">
+                    <i class="fa-solid fa-utensils text-orange-500"></i> Food
+                </button>
+                <button onclick="filterCategory('attraction')" id="filter-attraction" class="filter-btn whitespace-nowrap px-4 py-2 bg-white text-gray-700 rounded-full shadow-md text-sm font-medium border border-gray-200 hover:bg-gray-50 transition flex items-center gap-2">
+                    <i class="fa-solid fa-camera text-blue-500"></i> Sights
+                </button>
+            </div>
+        </div>
+
+        <!-- Map Container -->
+        <div id="map-container">
+            <div id="map"></div>
+
+            <!-- Recenter Button -->
+            <button onclick="locateUser()" class="absolute bottom-6 right-4 w-12 h-12 bg-white rounded-full shadow-lg flex items-center justify-center text-gray-600 hover:text-indigo-600 transition ui-layer">
+                <i class="fa-solid fa-location-crosshairs text-xl"></i>
+            </button>
+
+            <!-- AI Guide Button -->
+            <button onclick="toggleChat()" class="absolute bottom-6 left-4 w-12 h-12 bg-gradient-to-r from-purple-500 to-indigo-600 rounded-full shadow-[0_0_15px_rgba(168,85,247,0.5)] flex items-center justify-center text-white hover:scale-105 transition transform ui-layer z-50">
+                <i class="fa-solid fa-sparkles text-xl"></i>
+            </button>
+        </div>
+
+        <!-- AI Chat Window -->
+        <div id="ai-chat-window" class="absolute bottom-20 left-4 w-80 max-w-[calc(100vw-32px)] bg-white rounded-2xl shadow-2xl flex flex-col overflow-hidden transition-all duration-300 transform translate-y-8 opacity-0 pointer-events-none ui-layer z-50" style="height: 380px; max-height: 50vh;">
+            <div class="bg-gradient-to-r from-purple-600 to-indigo-600 p-3 text-white flex justify-between items-center shadow-md z-10">
+                <div class="flex items-center gap-2">
+                    <div class="bg-white/20 p-1.5 rounded-lg">
+                        <i class="fa-solid fa-robot text-sm"></i>
+                    </div>
+                    <span class="font-bold text-sm">Local AI Concierge</span>
+                </div>
+                <button onclick="toggleChat()" class="text-white hover:text-purple-200 transition">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+            <div id="chat-messages" class="flex-1 p-4 overflow-y-auto bg-slate-50 flex flex-col gap-3 text-sm">
+                <div class="bg-purple-100 text-purple-900 p-3 rounded-2xl rounded-tl-sm self-start max-w-[85%] shadow-sm border border-purple-200">
+                    Hey! I'm scanning live places near you. What kind of vibe are you looking for right now? ✨
+                </div>
+            </div>
+            <div class="p-3 bg-white border-t border-gray-100 flex items-center gap-2">
+                <input type="text" id="chat-input" placeholder="e.g., Where's a quiet cafe?" class="flex-1 bg-gray-100 rounded-full px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 transition" onkeypress="if(event.key === 'Enter') sendChatMessage()">
+                <button onclick="sendChatMessage()" class="w-9 h-9 bg-purple-600 text-white rounded-full flex items-center justify-center hover:bg-purple-700 transition shadow-sm">
+                    <i class="fa-solid fa-paper-plane text-xs relative right-0.5"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Place Details Bottom Sheet -->
+        <div id="place-details-sheet" class="absolute bottom-0 left-0 right-0 bg-white rounded-t-3xl shadow-[0_-10px_40px_rgba(0,0,0,0.1)] h-auto max-h-[80vh] flex flex-col ui-layer">
+            <div class="w-full flex justify-center pt-3 pb-1 cursor-pointer" onclick="closePlaceDetails()">
+                <div class="w-12 h-1.5 bg-gray-300 rounded-full"></div>
+            </div>
+            <div id="place-content" class="p-6 overflow-y-auto hidden flex-col"></div>
+            <div id="sheet-empty-state" class="p-8 text-center flex flex-col items-center justify-center text-gray-500">
+                <div class="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+                    <i class="fa-solid fa-hand-pointer text-2xl text-gray-400"></i>
+                </div>
+                <p>Tap a marker on the map to see what's trending there.</p>
+            </div>
+        </div>
+
+        <!-- Loading Overlay -->
+        <div id="loading-overlay" class="absolute inset-0 bg-white/80 backdrop-blur-sm flex flex-col items-center justify-center hidden ui-layer">
+            <div class="w-12 h-12 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin mb-4"></div>
+            <p id="loading-text" class="text-gray-700 font-medium animate-pulse">Finding your location...</p>
+        </div>
+
+    </main>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+
+    <script>
+        // ─── State ────────────────────────────────────────────────────────────────
+        let map;
+        let userMarker;
+        let placeMarkersLayer;
+        let currentFilter = 'all';
+        let currentVibe   = 'any';
+        let userCoords    = { lat: 52.0740, lng: 4.3580 }; // Default: Voorburg
+        let dynamicPlaces = [];
+
+        // ─── Boot ─────────────────────────────────────────────────────────────────
+        window.onload = () => {
+            initMap();
+            locateUser();
+        };
+
+        function initMap() {
+            map = L.map('map', { zoomControl: false }).setView([userCoords.lat, userCoords.lng], 14);
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+                attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
+                maxZoom: 19
+            }).addTo(map);
+            placeMarkersLayer = L.layerGroup().addTo(map);
+        }
+
+        // ─── Location ─────────────────────────────────────────────────────────────
+        function locateUser() {
+            showLoading('Finding your location...');
+            if (!('geolocation' in navigator)) {
+                onLocationReady();
+                return;
+            }
+            navigator.geolocation.getCurrentPosition(
+                position => {
+                    userCoords = { lat: position.coords.latitude, lng: position.coords.longitude };
+                    onLocationReady();
+                },
+                () => {
+                    showToast('Using default location (Voorburg).');
+                    onLocationReady();
+                },
+                { timeout: 10000, enableHighAccuracy: true }
+            );
+        }
+
+        async function onLocationReady() {
+            updateUserLocationOnMap();
+            await loadPlacesFromAPI();
+            hideLoading();
+        }
+
+        function updateUserLocationOnMap() {
+            map.flyTo([userCoords.lat, userCoords.lng], 15);
+            const userIcon = L.divIcon({
+                className: 'custom-div-icon',
+                html: `<div style="position:relative;"><div class="user-pulse"></div><div class="user-location-marker"></div></div>`,
+                iconSize: [20, 20],
+                iconAnchor: [10, 10]
+            });
+            if (userMarker) {
+                userMarker.setLatLng([userCoords.lat, userCoords.lng]);
+            } else {
+                userMarker = L.marker([userCoords.lat, userCoords.lng], { icon: userIcon, zIndexOffset: 1000 }).addTo(map);
+            }
+        }
+
+        // ─── API Calls ────────────────────────────────────────────────────────────
+
+        // Fetch real places from our secure serverless proxy
+        async function loadPlacesFromAPI() {
+            showLoading('Scanning trending spots nearby...');
+            try {
+                const url = `/api/places?lat=${userCoords.lat}&lng=${userCoords.lng}&category=${currentFilter}`;
+                const response = await fetch(url);
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                const data = await response.json();
+
+                if (data.places && data.places.length > 0) {
+                    dynamicPlaces = data.places;
+                    renderMarkers();
+                    showToast(`Found ${dynamicPlaces.length} trending spots nearby!`);
+                } else {
+                    showToast('No places found nearby. Try a different area.');
+                }
+            } catch (error) {
+                console.error('Places fetch error:', error);
+                showToast('Could not load places. Check your connection.');
+            }
+        }
+
+        // Proxy Gemini calls through our secure serverless function
+        async function callGemini(userPrompt, systemPrompt) {
+            try {
+                const response = await fetch('/api/gemini', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ userPrompt, systemPrompt })
+                });
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                const data = await response.json();
+                return data.text || "Hmm, the AI couldn't formulate a response.";
+            } catch (error) {
+                console.error('Gemini proxy error:', error);
+                return "The AI is taking a quick coffee break. Try again in a moment!";
+            }
+        }
+
+        // ─── Marker Rendering ─────────────────────────────────────────────────────
+        const getCategoryConfig = (category) => {
+            switch (category) {
+                case 'cafe':       return { color: '#D97706', icon: 'fa-mug-hot' };
+                case 'restaurant': return { color: '#F97316', icon: 'fa-utensils' };
+                case 'attraction': return { color: '#3B82F6', icon: 'fa-camera' };
+                default:           return { color: '#4F46E5', icon: 'fa-map-pin' };
+            }
+        };
+
+        function renderMarkers() {
+            placeMarkersLayer.clearLayers();
+
+            const filtered = dynamicPlaces.filter(p => {
+                const matchCat  = currentFilter === 'all' || p.category === currentFilter;
+                const matchVibe = currentVibe === 'any'   || p.vibes.includes(currentVibe);
+                return matchCat && matchVibe;
+            });
+
+            filtered.forEach(place => {
+                const config    = getCategoryConfig(place.category);
+                const scale     = place.trendScore > 90 ? 1.1 : (place.trendScore > 75 ? 1 : 0.9);
+                const pulseHtml = place.trendScore > 80
+                    ? `<div class="marker-pulse" style="background:${config.color}40;"></div>` : '';
+                const trendBadge = place.trendScore > 85
+                    ? `<div class="marker-trend"><i class="fa-solid fa-arrow-trend-up"></i></div>` : '';
+
+                const icon = L.divIcon({
+                    className: 'custom-div-icon',
+                    html: `
+                        <div class="map-marker" style="transform:scale(${scale});">
+                            ${pulseHtml}
+                            <div class="marker-pin" style="background:${config.color};">
+                                <i class="fa-solid ${config.icon} marker-icon"></i>
+                            </div>
+                            ${trendBadge}
+                            <div class="absolute top-[40px] left-1/2 transform -translate-x-1/2 bg-white px-2 py-0.5 rounded text-xs font-bold shadow whitespace-nowrap text-gray-800">
+                                ${place.name}
+                            </div>
+                        </div>`,
+                    iconSize: [40, 40],
+                    iconAnchor: [20, 40]
+                });
+
+                L.marker([place.lat, place.lng], { icon })
+                    .addTo(placeMarkersLayer)
+                    .on('click', () => {
+                        map.setView([place.lat, place.lng], 16, { animate: true });
+                        openPlaceDetails(place.id);
+                    });
+            });
+        }
+
+        // ─── UI Interactions ──────────────────────────────────────────────────────
+        function filterCategory(category) {
+            currentFilter = category;
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                btn.classList.remove('active', 'bg-indigo-600', 'text-white', 'border-indigo-600');
+                btn.classList.add('bg-white', 'text-gray-700', 'border-gray-200');
+            });
+            const activeBtn = document.getElementById(`filter-${category}`);
+            activeBtn.classList.remove('bg-white', 'text-gray-700', 'border-gray-200');
+            activeBtn.classList.add('active', 'bg-indigo-600', 'text-white', 'border-indigo-600');
+            closePlaceDetails();
+            renderMarkers();
+        }
+
+        function changeVibe(vibe) {
+            currentVibe = vibe;
+            closePlaceDetails();
+            renderMarkers();
+            const labels = { any: 'All Vibes', family: 'Family-Friendly', date: 'Date Night', friends: 'Group Outings', solo: 'Solo Adventures' };
+            showToast(`Filtering for: ${labels[vibe]}`);
+        }
+
+        function openPlaceDetails(id) {
+            const place = dynamicPlaces.find(p => p.id === id);
+            if (!place) return;
+
+            const config = getCategoryConfig(place.category);
+            const content = document.getElementById('place-content');
+
+            content.innerHTML = `
+                <div class="flex justify-between items-start mb-4">
+                    <div>
+                        <div class="flex items-center gap-2 mb-1">
+                            <span class="px-2 py-0.5 rounded text-xs font-bold text-white uppercase tracking-wider" style="background-color:${config.color}">${place.category}</span>
+                            <span class="text-sm font-medium text-red-500 flex items-center gap-1 bg-red-50 px-2 py-0.5 rounded">
+                                <i class="fa-solid fa-fire"></i> Trending
+                            </span>
+                        </div>
+                        <h2 class="text-2xl font-bold text-gray-900 leading-tight">${place.name}</h2>
+                        <div class="flex items-center gap-1 mt-1 text-sm text-gray-600">
+                            <i class="fa-solid fa-star text-yellow-400"></i>
+                            <span class="font-bold text-gray-800">${place.rating}</span>
+                            <span>(${place.reviews.toLocaleString()})</span>
+                            <span class="mx-1">•</span>
+                            <span class="${place.openNow ? 'text-green-600' : 'text-red-500'} font-medium">${place.openNow ? 'Open' : 'Closed'}</span>
+                        </div>
+                    </div>
+                    <button onclick="closePlaceDetails()" class="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center text-gray-500 hover:bg-gray-200">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                </div>
+
+                <div class="bg-indigo-50 border border-indigo-100 rounded-xl p-3 mb-4 flex items-start gap-3">
+                    <div class="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 flex-shrink-0 mt-0.5">
+                        <i class="fa-solid fa-bolt"></i>
+                    </div>
+                    <div>
+                        <p class="text-xs font-bold text-indigo-800 uppercase tracking-wide">Why it's trending</p>
+                        <p class="text-sm text-indigo-900 font-medium">${place.trendReason}</p>
+                    </div>
+                </div>
+
+                <div class="bg-gradient-to-r from-purple-50 to-fuchsia-50 border border-purple-100 rounded-xl p-3 mb-4 flex items-start gap-3 shadow-sm">
+                    <div class="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-fuchsia-500 flex items-center justify-center text-white flex-shrink-0 mt-0.5 shadow-sm">
+                        <i class="fa-solid fa-wand-magic-sparkles text-xs"></i>
+                    </div>
+                    <div class="w-full">
+                        <p class="text-[10px] font-extrabold text-purple-800 uppercase tracking-widest mb-0.5">AI Vibe Check</p>
+                        <p id="ai-vibe-text" class="text-sm text-purple-900 font-medium animate-pulse">Consulting the local AI...</p>
+                    </div>
+                </div>
+
+                <img src="${place.image}" alt="${place.name}" class="w-full h-48 object-cover rounded-xl mb-4 shadow-sm"
+                     onerror="this.src='https://placehold.co/600x400/e2e8f0/475569?text=${encodeURIComponent(place.name)}'">
+
+                <p class="text-gray-700 mb-4 text-sm leading-relaxed">${place.description || place.address}</p>
+
+                <div class="flex gap-3 mt-auto pb-4">
+                    <a href="https://www.google.com/maps/dir/?api=1&destination=${place.lat},${place.lng}"
+                       target="_blank"
+                       class="flex-1 bg-indigo-600 text-white py-3 rounded-xl font-bold shadow-md hover:bg-indigo-700 transition flex items-center justify-center gap-2 text-center no-underline">
+                        <i class="fa-solid fa-route"></i> Go Here
+                    </a>
+                    <button onclick="sharePlace('${encodeURIComponent(place.name)}')" class="w-12 h-12 border border-gray-200 text-gray-600 rounded-xl flex items-center justify-center hover:bg-gray-50 transition">
+                        <i class="fa-solid fa-share-nodes"></i>
+                    </button>
+                </div>
+            `;
+
+            document.getElementById('sheet-empty-state').classList.add('hidden');
+            content.classList.remove('hidden');
+            content.classList.add('flex');
+            document.getElementById('place-details-sheet').classList.add('open');
+
+            // Fire AI vibe check async — doesn't block UI
+            generateVibeCheck(place);
+        }
+
+        function closePlaceDetails() {
+            document.getElementById('place-details-sheet').classList.remove('open');
+        }
+
+        function sharePlace(encodedName) {
+            if (navigator.share) {
+                navigator.share({ title: `Trending: ${decodeURIComponent(encodedName)}`, url: window.location.href });
+            } else {
+                navigator.clipboard.writeText(window.location.href);
+                showToast('Link copied!');
+            }
+        }
+
+        // ─── AI Features ──────────────────────────────────────────────────────────
+        async function generateVibeCheck(place) {
+            const vibeTextEl = document.getElementById('ai-vibe-text');
+            if (!vibeTextEl) return;
+
+            const vibeLabels = { any: 'Just exploring', date: 'Looking for a date spot', family: 'Out with the kids', friends: 'Hanging with friends', solo: 'Flying solo' };
+            const systemPrompt = 'You are a hip, local trend-spotter. Write a punchy, 1-2 sentence personalized recommendation. Use an emoji or two. Keep it conversational, short, and exciting.';
+            const userPrompt = `Place: ${place.name}\nCategory: ${place.category}\nDescription: ${place.description}\nTrending because: ${place.trendReason}\nUser context: ${vibeLabels[currentVibe] || 'Just exploring'}\n\nGive a personalized vibe check!`;
+
+            const response = await callGemini(userPrompt, systemPrompt);
+
+            if (document.getElementById('place-details-sheet').classList.contains('open') && document.getElementById('ai-vibe-text')) {
+                vibeTextEl.classList.remove('animate-pulse');
+                vibeTextEl.innerHTML = response.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>');
+            }
+        }
+
+        function toggleChat() {
+            document.getElementById('ai-chat-window').classList.toggle('open');
+        }
+
+        async function sendChatMessage() {
+            const inputEl = document.getElementById('chat-input');
+            const message = inputEl.value.trim();
+            if (!message) return;
+
+            inputEl.value = '';
+            appendMessage('user', message);
+            const typingId = appendTypingIndicator();
+
+            const visiblePlaces = dynamicPlaces.filter(p => {
+                const matchCat  = currentFilter === 'all' || p.category === currentFilter;
+                const matchVibe = currentVibe === 'any'   || p.vibes.includes(currentVibe);
+                return matchCat && matchVibe;
+            });
+
+            const mapContext = visiblePlaces.length
+                ? visiblePlaces.map(p => `- ${p.name} (${p.category}, ${p.rating}★): ${p.trendReason}`).join('\n')
+                : 'No places matching current filters.';
+
+            const systemPrompt = `You are a helpful, enthusiastic AI concierge for a 'Trending Near Me' app. Keep answers short (1–3 sentences), conversational, and useful. Here are the live trending places currently on the user's map:\n\n${mapContext}\n\nRecommend from these if relevant, or give general local advice for broader questions.`;
+
+            const responseText = await callGemini(message, systemPrompt);
+            removeElement(typingId);
+            appendMessage('bot', responseText);
+        }
+
+        function appendMessage(sender, text) {
+            const chatMessages = document.getElementById('chat-messages');
+            const msgDiv = document.createElement('div');
+            msgDiv.className = sender === 'user'
+                ? 'bg-indigo-600 text-white p-3 rounded-2xl rounded-tr-sm self-end max-w-[85%] shadow-sm'
+                : 'bg-white text-gray-800 border border-gray-200 p-3 rounded-2xl rounded-tl-sm self-start max-w-[90%] shadow-sm';
+            msgDiv.innerHTML = text.replace(/\*\*(.*?)\*\*/g, '<b class="font-bold">$1</b>');
+            chatMessages.appendChild(msgDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        function appendTypingIndicator() {
+            const chatMessages = document.getElementById('chat-messages');
+            const typingDiv = document.createElement('div');
+            const id = 'typing-' + Date.now();
+            typingDiv.id = id;
+            typingDiv.className = 'bg-white border border-gray-200 p-3 rounded-2xl rounded-tl-sm self-start shadow-sm flex gap-1 items-center h-10';
+            typingDiv.innerHTML = `
+                <div class="w-1.5 h-1.5 bg-purple-500 rounded-full typing-dot"></div>
+                <div class="w-1.5 h-1.5 bg-purple-500 rounded-full typing-dot"></div>
+                <div class="w-1.5 h-1.5 bg-purple-500 rounded-full typing-dot"></div>`;
+            chatMessages.appendChild(typingDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+            return id;
+        }
+
+        function removeElement(id) {
+            const el = document.getElementById(id);
+            if (el) el.remove();
+        }
+
+        async function refreshData() {
+            closePlaceDetails();
+            showLoading('Scanning for fresh trends...');
+            await loadPlacesFromAPI();
+            hideLoading();
+            showToast('Trending data refreshed!');
+        }
+
+        // ─── Utils ────────────────────────────────────────────────────────────────
+        function showLoading(text) {
+            document.getElementById('loading-text').textContent = text;
+            document.getElementById('loading-overlay').classList.remove('hidden');
+        }
+        function hideLoading() {
+            document.getElementById('loading-overlay').classList.add('hidden');
+        }
+        function showToast(message) {
+            const toast = document.createElement('div');
+            toast.className = 'absolute top-20 left-1/2 transform -translate-x-1/2 bg-gray-800 text-white px-4 py-2 rounded-full text-sm font-medium shadow-lg ui-layer transition-opacity duration-300 whitespace-nowrap';
+            toast.textContent = message;
+            document.body.appendChild(toast);
+            setTimeout(() => { toast.style.opacity = '0'; }, 2000);
+            setTimeout(() => { toast.remove(); }, 2300);
+        }
+    </script>
+</body>
+</html>
