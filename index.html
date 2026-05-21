@@ -104,6 +104,22 @@
                 <button onclick="filterCategory('attraction')" id="filter-attraction" class="filter-btn whitespace-nowrap px-4 py-2 bg-white text-gray-700 rounded-full shadow-md text-sm font-medium border border-gray-200 hover:bg-gray-50 transition flex items-center gap-2">
                     <i class="fa-solid fa-camera text-blue-500"></i> Sights
                 </button>
+                <button onclick="filterCategory('events')" id="filter-events" class="filter-btn whitespace-nowrap px-4 py-2 bg-white text-gray-700 rounded-full shadow-md text-sm font-medium border border-gray-200 hover:bg-gray-50 transition flex items-center gap-2">
+                    <i class="fa-solid fa-ticket text-pink-600"></i> Events
+                </button>
+            </div>
+
+            <!-- Date-window selector — only shown when Events is active -->
+            <div id="date-window-row" class="hidden space-x-2 overflow-x-auto no-scrollbar pb-2 pointer-events-auto">
+                <button onclick="changeDateWindow('today')" id="dw-today" class="dw-btn whitespace-nowrap px-4 py-1.5 bg-white text-gray-700 rounded-full shadow text-xs font-semibold border border-gray-200 hover:bg-gray-50 transition">
+                    Today
+                </button>
+                <button onclick="changeDateWindow('weekend')" id="dw-weekend" class="dw-btn active whitespace-nowrap px-4 py-1.5 bg-pink-600 text-white rounded-full shadow text-xs font-semibold border border-pink-600 transition">
+                    This Weekend
+                </button>
+                <button onclick="changeDateWindow('week')" id="dw-week" class="dw-btn whitespace-nowrap px-4 py-1.5 bg-white text-gray-700 rounded-full shadow text-xs font-semibold border border-gray-200 hover:bg-gray-50 transition">
+                    Next 7 Days
+                </button>
             </div>
         </div>
 
@@ -133,11 +149,11 @@
             </div>
             <div id="chat-messages" class="flex-1 p-4 overflow-y-auto bg-slate-50 flex flex-col gap-3 text-sm">
                 <div class="bg-purple-100 text-purple-900 p-3 rounded-2xl rounded-tl-sm self-start max-w-[85%] shadow-sm border border-purple-200">
-                    Hey! I'm scanning live places near you. What kind of vibe are you looking for right now? ✨
+                    Hey! I'm scanning live places and events near you. What kind of vibe are you looking for right now? ✨
                 </div>
             </div>
             <div class="p-3 bg-white border-t border-gray-100 flex items-center gap-2">
-                <input type="text" id="chat-input" placeholder="e.g., Where's a quiet cafe?" class="flex-1 bg-gray-100 rounded-full px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 transition" onkeypress="if(event.key === 'Enter') sendChatMessage()">
+                <input type="text" id="chat-input" placeholder="e.g., What's on this weekend?" class="flex-1 bg-gray-100 rounded-full px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 transition" onkeypress="if(event.key === 'Enter') sendChatMessage()">
                 <button onclick="sendChatMessage()" class="w-9 h-9 bg-purple-600 text-white rounded-full flex items-center justify-center hover:bg-purple-700 transition shadow-sm">
                     <i class="fa-solid fa-paper-plane text-xs relative right-0.5"></i>
                 </button>
@@ -170,10 +186,12 @@
         let map;
         let userMarker;
         let placeMarkersLayer;
-        let currentFilter = 'all';
-        let currentVibe   = 'any';
-        let userCoords    = { lat: 52.0740, lng: 4.3580 };
-        let dynamicPlaces = [];
+        let currentFilter     = 'all';
+        let currentVibe       = 'any';
+        let currentDateWindow = 'weekend';
+        let userCoords        = { lat: 52.0740, lng: 4.3580 }; // Default: Voorburg
+        let dynamicPlaces     = [];
+        let dynamicEvents     = [];
 
         window.onload = () => {
             initMap();
@@ -210,7 +228,11 @@
 
         async function onLocationReady() {
             updateUserLocationOnMap();
-            await loadPlacesFromAPI();
+            if (currentFilter === 'events') {
+                await loadEventsFromAPI();
+            } else {
+                await loadPlacesFromAPI();
+            }
             hideLoading();
         }
 
@@ -250,6 +272,30 @@
             }
         }
 
+        // Fetch real events from the Ticketmaster proxy
+        async function loadEventsFromAPI() {
+            showLoading('Finding events near you...');
+            try {
+                const url = `/api/events?lat=${userCoords.lat}&lng=${userCoords.lng}&window=${currentDateWindow}`;
+                const response = await fetch(url);
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                const data = await response.json();
+
+                dynamicEvents = data.events || [];
+                renderMarkers();
+
+                if (dynamicEvents.length > 0) {
+                    showToast(`Found ${dynamicEvents.length} event${dynamicEvents.length > 1 ? 's' : ''}!`);
+                } else {
+                    showToast('No ticketed events found nearby for this window.');
+                }
+            } catch (error) {
+                console.error('Events fetch error:', error);
+                showToast('Could not load events. Check your connection.');
+            }
+            hideLoading();
+        }
+
         async function callGemini(userPrompt, systemPrompt) {
             try {
                 const response = await fetch('/api/gemini', {
@@ -277,7 +323,44 @@
 
         function renderMarkers() {
             placeMarkersLayer.clearLayers();
+            if (currentFilter === 'events') {
+                renderEventMarkers();
+            } else {
+                renderPlaceMarkers();
+            }
+        }
 
+        function renderEventMarkers() {
+            const eventColor = '#DB2777'; // pink — distinct from place categories
+
+            dynamicEvents.forEach(ev => {
+                const label = ev.name.length > 22 ? ev.name.slice(0, 22) + '…' : ev.name;
+                const icon = L.divIcon({
+                    className: 'custom-div-icon',
+                    html: `
+                        <div class="map-marker">
+                            <div class="marker-pulse" style="background:${eventColor}40;"></div>
+                            <div class="marker-pin" style="background:${eventColor};">
+                                <i class="fa-solid fa-ticket marker-icon"></i>
+                            </div>
+                            <div class="absolute top-[40px] left-1/2 transform -translate-x-1/2 bg-white px-2 py-0.5 rounded text-xs font-bold shadow whitespace-nowrap text-gray-800">
+                                ${label}
+                            </div>
+                        </div>`,
+                    iconSize: [40, 40],
+                    iconAnchor: [20, 40]
+                });
+
+                L.marker([ev.lat, ev.lng], { icon })
+                    .addTo(placeMarkersLayer)
+                    .on('click', () => {
+                        map.setView([ev.lat, ev.lng], 16, { animate: true });
+                        openEventDetails(ev.id);
+                    });
+            });
+        }
+
+        function renderPlaceMarkers() {
             const filtered = dynamicPlaces.filter(p => {
                 const matchCat  = currentFilter === 'all' || p.category === currentFilter;
                 const matchVibe = currentVibe === 'any'   || p.vibes.includes(currentVibe);
@@ -318,17 +401,43 @@
             });
         }
 
+        // ─── UI Interactions ──────────────────────────────────────────────────────
         function filterCategory(category) {
             currentFilter = category;
             document.querySelectorAll('.filter-btn').forEach(btn => {
-                btn.classList.remove('active', 'bg-indigo-600', 'text-white', 'border-indigo-600');
+                btn.classList.remove('active', 'bg-indigo-600', 'text-white', 'border-indigo-600', 'bg-pink-600', 'border-pink-600');
                 btn.classList.add('bg-white', 'text-gray-700', 'border-gray-200');
             });
             const activeBtn = document.getElementById(`filter-${category}`);
             activeBtn.classList.remove('bg-white', 'text-gray-700', 'border-gray-200');
-            activeBtn.classList.add('active', 'bg-indigo-600', 'text-white', 'border-indigo-600');
+
+            const dateRow = document.getElementById('date-window-row');
             closePlaceDetails();
-            renderMarkers();
+
+            if (category === 'events') {
+                activeBtn.classList.add('active', 'bg-pink-600', 'text-white', 'border-pink-600');
+                dateRow.classList.remove('hidden');
+                dateRow.classList.add('flex');
+                loadEventsFromAPI();
+            } else {
+                activeBtn.classList.add('active', 'bg-indigo-600', 'text-white', 'border-indigo-600');
+                dateRow.classList.add('hidden');
+                dateRow.classList.remove('flex');
+                renderMarkers();
+            }
+        }
+
+        function changeDateWindow(window) {
+            currentDateWindow = window;
+            document.querySelectorAll('.dw-btn').forEach(btn => {
+                btn.classList.remove('active', 'bg-pink-600', 'text-white', 'border-pink-600');
+                btn.classList.add('bg-white', 'text-gray-700', 'border-gray-200');
+            });
+            const activeBtn = document.getElementById(`dw-${window}`);
+            activeBtn.classList.remove('bg-white', 'text-gray-700', 'border-gray-200');
+            activeBtn.classList.add('active', 'bg-pink-600', 'text-white', 'border-pink-600');
+            closePlaceDetails();
+            loadEventsFromAPI();
         }
 
         function changeVibe(vibe) {
@@ -418,6 +527,93 @@
             document.getElementById('place-details-sheet').classList.remove('open');
         }
 
+        function openEventDetails(id) {
+            const ev = dynamicEvents.find(e => e.id === id);
+            if (!ev) return;
+
+            const eventColor = '#DB2777';
+            const content = document.getElementById('place-content');
+
+            content.innerHTML = `
+                <div class="flex justify-between items-start mb-4">
+                    <div>
+                        <div class="flex items-center gap-2 mb-1">
+                            <span class="px-2 py-0.5 rounded text-xs font-bold text-white uppercase tracking-wider" style="background-color:${eventColor}">${ev.segment}</span>
+                            <span class="text-sm font-medium text-pink-600 flex items-center gap-1 bg-pink-50 px-2 py-0.5 rounded">
+                                <i class="fa-solid fa-ticket"></i> Event
+                            </span>
+                        </div>
+                        <h2 class="text-2xl font-bold text-gray-900 leading-tight">${ev.name}</h2>
+                        <div class="flex items-center gap-2 mt-1 text-sm text-gray-600">
+                            <i class="fa-solid fa-calendar-day text-pink-500"></i>
+                            <span class="font-bold text-gray-800">${ev.dateLabel}</span>
+                        </div>
+                    </div>
+                    <button onclick="closePlaceDetails()" class="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center text-gray-500 hover:bg-gray-200">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                </div>
+
+                <div class="bg-pink-50 border border-pink-100 rounded-xl p-3 mb-4 flex items-start gap-3">
+                    <div class="w-8 h-8 rounded-full bg-pink-100 flex items-center justify-center text-pink-600 flex-shrink-0 mt-0.5">
+                        <i class="fa-solid fa-location-dot"></i>
+                    </div>
+                    <div>
+                        <p class="text-xs font-bold text-pink-800 uppercase tracking-wide">Where</p>
+                        <p class="text-sm text-pink-900 font-medium">${ev.venue}${ev.address ? ' · ' + ev.address : ''}</p>
+                    </div>
+                </div>
+
+                <div class="bg-gradient-to-r from-purple-50 to-fuchsia-50 border border-purple-100 rounded-xl p-3 mb-4 flex items-start gap-3 shadow-sm">
+                    <div class="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-fuchsia-500 flex items-center justify-center text-white flex-shrink-0 mt-0.5 shadow-sm">
+                        <i class="fa-solid fa-wand-magic-sparkles text-xs"></i>
+                    </div>
+                    <div class="w-full">
+                        <p class="text-[10px] font-extrabold text-purple-800 uppercase tracking-widest mb-0.5">AI Vibe Check</p>
+                        <p id="ai-vibe-text" class="text-sm text-purple-900 font-medium animate-pulse">Consulting the local AI...</p>
+                    </div>
+                </div>
+
+                <img src="${ev.image}" alt="${ev.name}" class="w-full h-48 object-cover rounded-xl mb-4 shadow-sm"
+                     onerror="this.src='https://placehold.co/600x400/db2777/ffffff?text=${encodeURIComponent(ev.segment)}'">
+
+                ${ev.price ? `<p class="text-gray-700 mb-4 text-sm"><span class="font-bold">Tickets from</span> ${ev.price}</p>` : ''}
+
+                <div class="flex gap-3 mt-auto pb-4">
+                    ${ev.url ? `<a href="${ev.url}" target="_blank" class="flex-1 bg-pink-600 text-white py-3 rounded-xl font-bold shadow-md hover:bg-pink-700 transition flex items-center justify-center gap-2 text-center no-underline">
+                        <i class="fa-solid fa-ticket"></i> Get Tickets
+                    </a>` : ''}
+                    <a href="https://www.google.com/maps/dir/?api=1&destination=${ev.lat},${ev.lng}" target="_blank"
+                       class="w-12 h-12 border border-gray-200 text-gray-600 rounded-xl flex items-center justify-center hover:bg-gray-50 transition no-underline">
+                        <i class="fa-solid fa-route"></i>
+                    </a>
+                </div>
+            `;
+
+            document.getElementById('sheet-empty-state').classList.add('hidden');
+            content.classList.remove('hidden');
+            content.classList.add('flex');
+            document.getElementById('place-details-sheet').classList.add('open');
+
+            generateEventVibeCheck(ev);
+        }
+
+        async function generateEventVibeCheck(ev) {
+            const vibeTextEl = document.getElementById('ai-vibe-text');
+            if (!vibeTextEl) return;
+
+            const vibeLabels = { any: 'Just exploring', date: 'Looking for a date-night plan', family: 'Out with the kids', friends: 'Hanging with friends', solo: 'Flying solo' };
+            const systemPrompt = 'You are a hip, local trend-spotter. Write a punchy, 1-2 sentence take on whether this event is worth going to, tailored to the user. Use an emoji or two. Keep it short and exciting.';
+            const userPrompt = `Event: ${ev.name}\nType: ${ev.segment}\nVenue: ${ev.venue}\nWhen: ${ev.dateLabel}\nUser context: ${vibeLabels[currentVibe] || 'Just exploring'}\n\nGive a personalized vibe check!`;
+
+            const response = await callGemini(userPrompt, systemPrompt);
+
+            if (document.getElementById('place-details-sheet').classList.contains('open') && document.getElementById('ai-vibe-text')) {
+                vibeTextEl.classList.remove('animate-pulse');
+                vibeTextEl.innerHTML = response.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>');
+            }
+        }
+
         function sharePlace(encodedName) {
             if (navigator.share) {
                 navigator.share({ title: `Trending: ${decodeURIComponent(encodedName)}`, url: window.location.href });
@@ -456,17 +652,24 @@
             appendMessage('user', message);
             const typingId = appendTypingIndicator();
 
-            const visiblePlaces = dynamicPlaces.filter(p => {
-                const matchCat  = currentFilter === 'all' || p.category === currentFilter;
-                const matchVibe = currentVibe === 'any'   || p.vibes.includes(currentVibe);
-                return matchCat && matchVibe;
-            });
+            let mapContext, systemPrompt;
 
-            const mapContext = visiblePlaces.length
-                ? visiblePlaces.map(p => `- ${p.name} (${p.category}, ${p.rating}★): ${p.trendReason}`).join('\n')
-                : 'No places matching current filters.';
-
-            const systemPrompt = `You are a helpful, enthusiastic AI concierge for a 'Trending Near Me' app. Keep answers short (1–3 sentences), conversational, and useful. Here are the live trending places currently on the user's map:\n\n${mapContext}\n\nRecommend from these if relevant, or give general local advice for broader questions.`;
+            if (currentFilter === 'events') {
+                mapContext = dynamicEvents.length
+                    ? dynamicEvents.map(e => `- ${e.name} (${e.segment}) at ${e.venue}, ${e.dateLabel}`).join('\n')
+                    : 'No events currently on the map for this date window.';
+                systemPrompt = `You are a helpful, enthusiastic AI concierge for a 'Trending Near Me' app. Keep answers short (1–3 sentences), conversational, and useful. Here are the live events currently on the user's map:\n\n${mapContext}\n\nHelp them pick something to do, or give general local advice for broader questions.`;
+            } else {
+                const visiblePlaces = dynamicPlaces.filter(p => {
+                    const matchCat  = currentFilter === 'all' || p.category === currentFilter;
+                    const matchVibe = currentVibe === 'any'   || p.vibes.includes(currentVibe);
+                    return matchCat && matchVibe;
+                });
+                mapContext = visiblePlaces.length
+                    ? visiblePlaces.map(p => `- ${p.name} (${p.category}, ${p.rating}★): ${p.trendReason}`).join('\n')
+                    : 'No places matching current filters.';
+                systemPrompt = `You are a helpful, enthusiastic AI concierge for a 'Trending Near Me' app. Keep answers short (1–3 sentences), conversational, and useful. Here are the live trending places currently on the user's map:\n\n${mapContext}\n\nRecommend from these if relevant, or give general local advice for broader questions.`;
+            }
 
             const responseText = await callGemini(message, systemPrompt);
             removeElement(typingId);
@@ -506,10 +709,15 @@
 
         async function refreshData() {
             closePlaceDetails();
-            showLoading('Scanning for fresh trends...');
-            await loadPlacesFromAPI();
-            hideLoading();
-            showToast('Trending data refreshed!');
+            if (currentFilter === 'events') {
+                await loadEventsFromAPI();
+                showToast('Events refreshed!');
+            } else {
+                showLoading('Scanning for fresh trends...');
+                await loadPlacesFromAPI();
+                hideLoading();
+                showToast('Trending data refreshed!');
+            }
         }
 
         function showLoading(text) {
