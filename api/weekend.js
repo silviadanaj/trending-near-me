@@ -25,45 +25,60 @@ export default async function handler(req, res) {
   const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
   const now = new Date();
   const weekend = getWeekendDates(now);
-  const todayStr = now.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+  const todayStr = now.toLocaleDateString('en-GB', {
+    weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
+  });
 
-  const prompt = `Today is ${todayStr}. You are a local events researcher for ${city}, Netherlands.
+  const prompt = `Today is ${todayStr}. You are a local discovery scout for ${city}, Netherlands.
 
-Search the web NOW using ALL of these search queries to find events this weekend (${weekend}):
+Your mission: find things happening THIS WEEKEND (${weekend}) in ${city} that a local resident would NOT find out about unless they specifically went looking. Think: fairs, markets, pop-ups, neighbourhood festivals, one-off events, temporary exhibitions, community happenings — the kind of thing you stumble upon or hear about from a friend.
 
-1. Search: "${city} evenementen dit weekend"
-2. Search: "wat te doen ${city} dit weekend"
-3. Search: "uitagenda ${city} weekend"
-4. Search: "${city} events this weekend"
-5. Search: site:uitagenda.nl "${city}"
-6. Search: site:eventbrite.nl "${city}"
-7. Search: "${city} markt zaterdag zondag"
-8. Search: "${city} live muziek dit weekend"
-9. Search: "${city} festival weekend"
-10. Search: "${city} theater voorstelling weekend"
+Search these sources aggressively:
 
-Compile everything you find into a single list. Include ALL types of events:
-🎵 Live music, concerts, DJ nights
-🛍️ Markets, flea markets, Sunday markets, food markets
-🎨 Art openings, exhibitions, museum events
-🍽️ Food festivals, tastings, pop-ups, restaurant events
-🎭 Theatre, comedy, dance, cabaret
-🎉 Club nights, parties, social events
-🌳 Outdoor events, sports, park activities
-👨‍👩‍👧 Family events, kids activities
-🎪 Festivals, fairs, neighbourhood events
+1. "${city} kermis dit weekend"
+2. "${city} braderie weekend"  
+3. "${city} markt buurtfeest ${weekend}"
+4. "${city} rommelmarkt vlooienmarkt weekend"
+5. "evenementen ${city} dit weekend site:uitagenda.nl"
+6. "evenementen ${city} dit weekend site:eventbrite.nl"
+7. "${city} festival braderie kermis 2026"
+8. "${city} open dag expositie tijdelijk"
+9. "facebook events ${city} this weekend"
+10. "site:partyflock.nl ${city} weekend"
+11. "site:meetup.com ${city} this weekend"
+12. "${city} what's on this weekend hidden gems"
+13. "${city} neighbourhood event street party weekend"
+14. "gemeente ${city} activiteiten weekend"
 
-Format each item exactly like this:
-🎵 **[Event Name]**
-[Venue name], [time if known]
-[One sentence description. Free/€XX if known.]
+Focus especially on:
+🎡 Fairs (kermis), funfairs, carnivals
+🛍️ Street markets, braderie, rommelmarkt, Sunday markets
+🎪 Neighbourhood festivals, buurtfeesten, straatfeesten
+🌳 Park events, outdoor pop-ups, temporary installations
+🏛️ Open days (open dag) at unusual locations
+🎨 Pop-up exhibitions, temporary shows
+🍺 Local pub/café special events, terras events
+🎠 Family days, kids events in unexpected locations
+🎶 Free outdoor concerts, busking events
+🏘️ Community events most tourists wouldn't know about
 
-Aim for 12-20 items. Include both free and paid events. Include events at all scales — small café gigs count just as much as big festivals. Search Dutch AND English sources. Only list events actually happening this specific weekend. Start the list immediately with no introduction.`;
+For each thing you find, write it like a friend texting you a tip:
+- Lead with WHY it's worth knowing about
+- Be specific: real name, real location, real time
+- Flag if it's free or costs money
+- Flag if it's rare or unusual ("only happens once a year", "first time in the city", etc.)
+
+Format:
+🎡 **[Event name]**
+📍 [Venue/Location], [time]
+💬 [Why you'd want to know about this — 1-2 sentences in friendly tone]
+
+Find 10-15 things. Prioritise the unexpected over the obvious. Start immediately with no intro.`;
 
   const payload = {
     contents: [{ parts: [{ text: prompt }] }],
     tools: [{ google_search: {} }],
-    generationConfig: { maxOutputTokens: 2000, temperature: 0.5 }
+    generationConfig: { maxOutputTokens: 2500, temperature: 0.4 }
   };
 
   try {
@@ -78,7 +93,7 @@ Aim for 12-20 items. Include both free and paid events. Include events at all sc
     }
     const result = await response.json();
     const intel = result.candidates?.[0]?.content?.parts?.[0]?.text
-      || 'Nothing found — try a different city or check back closer to the weekend.';
+      || 'Nothing unexpected found this weekend — try a different city or check back Friday when more events get posted.';
     return res.status(200).json({ intel, weekend, city });
   } catch (error) {
     console.error('Weekend intel error:', error);
