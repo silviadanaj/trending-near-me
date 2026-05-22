@@ -18,40 +18,52 @@ export default async function handler(req, res) {
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'POST')   return res.status(405).json({ error: 'Method not allowed' });
 
-  const { city = 'The Hague' } = req.body;
+  const { city = 'Den Haag' } = req.body;
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) return res.status(500).json({ error: 'Gemini API key not configured' });
 
   const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
-  const weekend = getWeekendDates(new Date());
+  const now = new Date();
+  const weekend = getWeekendDates(now);
+  const todayStr = now.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
 
-  const prompt = `You are a local events scout for ${city}, Netherlands.
+  const prompt = `Today is ${todayStr}. You are a local events researcher for ${city}, Netherlands.
 
-Search the web RIGHT NOW for events and activities happening THIS WEEKEND (${weekend}) in ${city}. 
+Search the web NOW using ALL of these search queries to find events this weekend (${weekend}):
 
-Look for ALL of these types of things:
-- Local markets, flea markets, farmers markets, Sunday markets
-- Pop-up events, temporary exhibitions, art openings, gallery events
-- Neighbourhood festivals, street parties, fairs
-- Live music events, DJ nights, concerts (including free ones)
-- Theatre, comedy, dance performances
-- Café and bar special events, quiz nights, tastings, workshops
-- Community events, sports events, outdoor activities
-- Food festivals, food truck events
-- Family-friendly events, kids activities
-- Club nights, cultural events
+1. Search: "${city} evenementen dit weekend"
+2. Search: "wat te doen ${city} dit weekend"
+3. Search: "uitagenda ${city} weekend"
+4. Search: "${city} events this weekend"
+5. Search: site:uitagenda.nl "${city}"
+6. Search: site:eventbrite.nl "${city}"
+7. Search: "${city} markt zaterdag zondag"
+8. Search: "${city} live muziek dit weekend"
+9. Search: "${city} festival weekend"
+10. Search: "${city} theater voorstelling weekend"
 
-Search in Dutch too (e.g. "weekend ${city} activiteiten", "${city} evenementen dit weekend", "uitagenda ${city}").
+Compile everything you find into a single list. Include ALL types of events:
+🎵 Live music, concerts, DJ nights
+🛍️ Markets, flea markets, Sunday markets, food markets
+🎨 Art openings, exhibitions, museum events
+🍽️ Food festivals, tastings, pop-ups, restaurant events
+🎭 Theatre, comedy, dance, cabaret
+🎉 Club nights, parties, social events
+🌳 Outdoor events, sports, park activities
+👨‍👩‍👧 Family events, kids activities
+🎪 Festivals, fairs, neighbourhood events
 
-Be specific: use real names, real venues, real times. Format as a clean emoji-bulleted list:
-🎵 for music, 🛍️ for markets, 🎨 for art, 🍽️ for food, 🎪 for festivals, 🎭 for theatre, 🏃 for sports, 🎉 for parties.
+Format each item exactly like this:
+🎵 **[Event Name]**
+[Venue name], [time if known]
+[One sentence description. Free/€XX if known.]
 
-Each item: bold name, then venue and time on the next line. Aim for 8-12 items. No intro text — start the list immediately.`;
+Aim for 12-20 items. Include both free and paid events. Include events at all scales — small café gigs count just as much as big festivals. Search Dutch AND English sources. Only list events actually happening this specific weekend. Start the list immediately with no introduction.`;
 
   const payload = {
     contents: [{ parts: [{ text: prompt }] }],
     tools: [{ google_search: {} }],
-    generationConfig: { maxOutputTokens: 1500, temperature: 0.7 }
+    generationConfig: { maxOutputTokens: 2000, temperature: 0.5 }
   };
 
   try {
@@ -66,7 +78,7 @@ Each item: bold name, then venue and time on the next line. Aim for 8-12 items. 
     }
     const result = await response.json();
     const intel = result.candidates?.[0]?.content?.parts?.[0]?.text
-      || 'Nothing found for this weekend — try a different city or check back later.';
+      || 'Nothing found — try a different city or check back closer to the weekend.';
     return res.status(200).json({ intel, weekend, city });
   } catch (error) {
     console.error('Weekend intel error:', error);
