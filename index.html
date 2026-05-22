@@ -39,6 +39,7 @@
         .typing-dot { animation:typing 1.4s infinite ease-in-out both; }
         .typing-dot:nth-child(1){animation-delay:-0.32s;} .typing-dot:nth-child(2){animation-delay:-0.16s;}
         @keyframes typing { 0%,80%,100%{transform:scale(0);} 40%{transform:scale(1);} }
+        #search-area-btn { transition: opacity 0.2s ease; }
     </style>
 </head>
 <body class="bg-gray-100 text-gray-800 flex flex-col h-screen">
@@ -113,6 +114,13 @@
 
         <div id="map-container">
             <div id="map"></div>
+
+            <div class="absolute top-0 left-0 right-0 flex justify-center ui-layer pointer-events-none" style="top:170px;">
+                <button id="search-area-btn" onclick="searchThisArea()" class="hidden pointer-events-auto bg-white border-2 border-indigo-400 rounded-full shadow-xl px-5 py-2.5 text-sm font-bold text-indigo-700 flex items-center gap-2 hover:bg-indigo-50 transition">
+                    <i class="fa-solid fa-magnifying-glass"></i> Search this area
+                </button>
+            </div>
+
             <button onclick="toggleDiscover()" id="discover-btn" class="absolute bottom-20 right-4 w-12 h-12 bg-gradient-to-r from-teal-500 to-emerald-500 rounded-full shadow-lg flex items-center justify-center text-white hover:scale-105 transition transform ui-layer z-50" title="Discover what's nearby">
                 <i class="fa-solid fa-compass text-xl"></i>
             </button>
@@ -134,7 +142,7 @@
             </div>
             <div id="chat-messages" class="flex-1 p-4 overflow-y-auto bg-slate-50 flex flex-col gap-3 text-sm">
                 <div class="bg-purple-100 text-purple-900 p-3 rounded-2xl rounded-tl-sm self-start max-w-[85%] shadow-sm border border-purple-200">
-                    Hey! I'm scanning live places and events near you. What are you looking for? ✨
+                    Hey! Pan the map anywhere and tap "Search this area" to explore. What are you looking for? ✨
                 </div>
             </div>
             <div class="p-3 bg-white border-t border-gray-100 flex items-center gap-2">
@@ -154,7 +162,7 @@
                 <div class="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
                     <i class="fa-solid fa-hand-pointer text-2xl text-gray-400"></i>
                 </div>
-                <p>Tap a marker on the map to see what's trending there.</p>
+                <p>Tap a marker to explore. Pan the map anywhere and tap "Search this area".</p>
             </div>
         </div>
 
@@ -168,7 +176,7 @@
                     </div>
                 </div>
                 <div class="flex items-center gap-2">
-                    <button onclick="loadWeekendIntel()" class="p-2 text-indigo-500 hover:text-indigo-700 transition" title="Refresh"><i class="fa-solid fa-rotate-right text-sm"></i></button>
+                    <button onclick="loadWeekendIntel()" class="p-2 text-indigo-500 hover:text-indigo-700 transition"><i class="fa-solid fa-rotate-right text-sm"></i></button>
                     <button onclick="changeEventsSource('ticketed')" class="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center text-gray-500 hover:bg-gray-200"><i class="fa-solid fa-xmark"></i></button>
                 </div>
             </div>
@@ -200,11 +208,13 @@
         let currentEventsSource = 'ticketed';
         let currentWICity       = 'Den Haag';
         let weekendIntelLoaded  = false;
-        let userCoords          = { lat: 52.0740, lng: 4.3580 };
-        let dynamicPlaces       = [];
-        let dynamicEvents       = [];
-        let discoverLayer       = null;
-        let discoverActive      = false;
+        let userCoords  = { lat: 52.0740, lng: 4.3580 };
+        let mapCenter   = { lat: 52.0740, lng: 4.3580 };
+        let dataCenter  = { lat: 52.0740, lng: 4.3580 };
+        let dynamicPlaces  = [];
+        let dynamicEvents  = [];
+        let discoverLayer  = null;
+        let discoverActive = false;
 
         window.onload = () => { initMap(); locateUser(); };
 
@@ -214,14 +224,40 @@
                 attribution: '&copy; OpenStreetMap contributors &copy; CARTO', maxZoom: 19
             }).addTo(map);
             placeMarkersLayer = L.layerGroup().addTo(map);
+            map.on('moveend', onMapMoved);
+        }
+
+        function onMapMoved() {
+            const center = map.getCenter();
+            mapCenter = { lat: center.lat, lng: center.lng };
+            const dx = mapCenter.lat - dataCenter.lat;
+            const dy = mapCenter.lng - dataCenter.lng;
+            const dist = Math.sqrt(dx*dx + dy*dy);
+            const btn = document.getElementById('search-area-btn');
+            if (dist > 0.009) { btn.classList.remove('hidden'); }
+            else { btn.classList.add('hidden'); }
+        }
+
+        async function searchThisArea() {
+            document.getElementById('search-area-btn').classList.add('hidden');
+            dataCenter = { ...mapCenter };
+            closePlaceDetails();
+            if (discoverActive) { clearDiscoverPins(); loadDiscoverPins(); }
+            if (currentFilter === 'events') { await loadEventsFromAPI(); }
+            else { await loadPlacesFromAPI(); }
         }
 
         function locateUser() {
             showLoading('Finding your location...');
             if (!('geolocation' in navigator)) { onLocationReady(); return; }
             navigator.geolocation.getCurrentPosition(
-                pos => { userCoords = { lat: pos.coords.latitude, lng: pos.coords.longitude }; onLocationReady(); },
-                ()  => { showToast('Using default location (Voorburg).'); onLocationReady(); },
+                pos => {
+                    userCoords = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+                    mapCenter  = { ...userCoords };
+                    dataCenter = { ...userCoords };
+                    onLocationReady();
+                },
+                () => { showToast('Using default location (Voorburg).'); onLocationReady(); },
                 { timeout: 10000, enableHighAccuracy: true }
             );
         }
@@ -246,23 +282,24 @@
         async function loadPlacesFromAPI() {
             showLoading('Scanning trending spots nearby...');
             try {
-                const res = await fetch(`/api/places?lat=${userCoords.lat}&lng=${userCoords.lng}&category=${currentFilter}`);
+                const res = await fetch(`/api/places?lat=${mapCenter.lat}&lng=${mapCenter.lng}&category=${currentFilter}`);
                 if (!res.ok) throw new Error();
                 const data = await res.json();
                 if (data.places?.length) { dynamicPlaces = data.places; renderMarkers(); showToast(`Found ${dynamicPlaces.length} trending spots!`); }
-                else showToast('No places found nearby.');
+                else showToast('No places found here.');
             } catch { showToast('Could not load places.'); }
+            hideLoading();
         }
 
         async function loadEventsFromAPI() {
             showLoading('Finding events near you...');
             try {
-                const res = await fetch(`/api/events?lat=${userCoords.lat}&lng=${userCoords.lng}&window=${currentDateWindow}`);
+                const res = await fetch(`/api/events?lat=${mapCenter.lat}&lng=${mapCenter.lng}&window=${currentDateWindow}`);
                 if (!res.ok) throw new Error();
                 const data = await res.json();
                 dynamicEvents = data.events || [];
                 renderMarkers();
-                showToast(dynamicEvents.length ? `Found ${dynamicEvents.length} events!` : 'No ticketed events found. Try AI Scan!');
+                showToast(dynamicEvents.length ? `Found ${dynamicEvents.length} events!` : 'No ticketed events. Try AI Scan!');
             } catch { showToast('Could not load events.'); }
             hideLoading();
         }
@@ -278,7 +315,11 @@
             } catch { return "The AI is on a coffee break. Try again!"; }
         }
 
-        const getCategoryConfig = cat => ({ cafe:{color:'#D97706',icon:'fa-mug-hot'}, restaurant:{color:'#F97316',icon:'fa-utensils'}, attraction:{color:'#3B82F6',icon:'fa-camera'} }[cat] || {color:'#4F46E5',icon:'fa-map-pin'});
+        const getCategoryConfig = cat => ({
+            cafe:       { color:'#D97706', icon:'fa-mug-hot' },
+            restaurant: { color:'#F97316', icon:'fa-utensils' },
+            attraction: { color:'#3B82F6', icon:'fa-camera' }
+        }[cat] || { color:'#4F46E5', icon:'fa-map-pin' });
 
         function renderMarkers() {
             placeMarkersLayer.clearLayers();
@@ -366,8 +407,7 @@
             btn.classList.remove('bg-white','text-gray-700','border-gray-200');
             if (source === 'ticketed') {
                 btn.classList.add('active','bg-pink-600','text-white','border-pink-600');
-                closeWeekendIntel();
-                loadEventsFromAPI();
+                closeWeekendIntel(); loadEventsFromAPI();
             } else {
                 btn.classList.add('active','bg-indigo-600','text-white','border-indigo-600');
                 document.getElementById('weekend-intel-panel').classList.add('open');
@@ -557,26 +597,18 @@
 
         async function refreshData() {
             closePlaceDetails();
+            dataCenter = { ...mapCenter };
             if (currentFilter==='events') {
                 if (currentEventsSource==='ai') { weekendIntelLoaded=false; loadWeekendIntel(); }
-                else { await loadEventsFromAPI(); showToast('Events refreshed!'); }
-            } else {
-                showLoading('Scanning for fresh trends...');
-                await loadPlacesFromAPI();
-                hideLoading();
-                showToast('Trending data refreshed!');
-            }
+                else { await loadEventsFromAPI(); }
+            } else { await loadPlacesFromAPI(); }
         }
 
         async function loadWeekendIntel() {
             const content  = document.getElementById('weekend-content');
             const subtitle = document.getElementById('weekend-subtitle');
             weekendIntelLoaded = false;
-            content.innerHTML = `
-                <div class="flex flex-col items-center justify-center py-10 gap-3 text-gray-400">
-                    <div class="w-8 h-8 border-4 border-indigo-200 border-t-indigo-500 rounded-full animate-spin"></div>
-                    <p class="animate-pulse text-center text-sm">Searching uitagenda, Eventbrite, local sites…<br>Takes ~10 seconds</p>
-                </div>`;
+            content.innerHTML = `<div class="flex flex-col items-center justify-center py-10 gap-3 text-gray-400"><div class="w-8 h-8 border-4 border-indigo-200 border-t-indigo-500 rounded-full animate-spin"></div><p class="animate-pulse text-center text-sm">Searching uitagenda, local sites…<br>Takes ~10 seconds</p></div>`;
             try {
                 const res = await fetch('/api/weekend', {
                     method: 'POST', headers: {'Content-Type':'application/json'},
@@ -593,22 +625,13 @@
                 content.innerHTML = html;
                 weekendIntelLoaded = true;
             } catch {
-                content.innerHTML = `
-                    <div class="flex flex-col items-center justify-center py-10 gap-2 text-gray-400">
-                        <i class="fa-solid fa-wifi-slash text-2xl"></i>
-                        <p class="text-center text-sm">Couldn't load intel. Try again.</p>
-                        <button onclick="loadWeekendIntel()" class="mt-2 px-4 py-2 bg-indigo-600 text-white rounded-full text-xs font-bold hover:bg-indigo-700 transition">Try Again</button>
-                    </div>`;
+                content.innerHTML = `<div class="flex flex-col items-center justify-center py-10 gap-2 text-gray-400"><i class="fa-solid fa-wifi-slash text-2xl"></i><p class="text-center text-sm">Couldn't load intel. Try again.</p><button onclick="loadWeekendIntel()" class="mt-2 px-4 py-2 bg-indigo-600 text-white rounded-full text-xs font-bold hover:bg-indigo-700 transition">Try Again</button></div>`;
             }
         }
 
-        // ─── Discover Mode ────────────────────────────────────────────────────────
         async function detectNearestCity(lat, lng) {
             try {
-                const res = await fetch(
-                    `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json`,
-                    { headers: { 'Accept-Language': 'en' } }
-                );
+                const res = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json`, { headers: { 'Accept-Language': 'en' } });
                 const data = await res.json();
                 return data.address?.city || data.address?.town || data.address?.municipality || 'Den Haag';
             } catch { return 'Den Haag'; }
@@ -618,11 +641,11 @@
             const slug = city.toLowerCase().replace(/\s+/g, '-');
             const tag  = city.toLowerCase().replace(/[\s-]+/g, '');
             return [
-                { name:'Uitagenda', icon:'fa-solid fa-calendar-days', color:'#F97316', url:`https://www.uitagenda.nl/agenda/${slug}` },
-                { name:'Instagram', icon:'fa-brands fa-instagram',    color:'#E1306C', url:`https://www.instagram.com/explore/tags/${tag}weekend/` },
-                { name:'Facebook',  icon:'fa-brands fa-facebook',     color:'#1877F2', url:`https://www.facebook.com/events/search?q=${encodeURIComponent(city + ' this weekend')}` },
+                { name:'Uitagenda',   icon:'fa-solid fa-calendar-days',    color:'#F97316', url:`https://www.uitagenda.nl/agenda/${slug}` },
+                { name:'Partyflock',  icon:'fa-solid fa-music',            color:'#8B5CF6', url:`https://partyflock.nl/city/${slug}/agenda` },
+                { name:'Facebook',    icon:'fa-brands fa-facebook',        color:'#1877F2', url:`https://www.facebook.com/events/search?q=${encodeURIComponent(city + ' this weekend')}` },
                 { name:'Google Maps', icon:'fa-solid fa-map-location-dot', color:'#4285F4', url:`https://www.google.com/maps/search/events+markets+activities/@${lat},${lng},14z` },
-                { name:'Eventbrite', icon:'fa-solid fa-ticket',       color:'#FF5733', url:`https://www.eventbrite.nl/d/netherlands--${slug}/events--this-weekend/` }
+                { name:'Eventbrite',  icon:'fa-solid fa-ticket',           color:'#FF5733', url:`https://www.eventbrite.nl/d/netherlands--${slug}/events--this-weekend/` }
             ];
         }
 
@@ -631,8 +654,8 @@
         async function loadDiscoverPins() {
             const btn = document.getElementById('discover-btn');
             btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin text-xl"></i>';
-            const city    = await detectNearestCity(userCoords.lat, userCoords.lng);
-            const sources = getDiscoverSources(city, userCoords.lat, userCoords.lng);
+            const city    = await detectNearestCity(mapCenter.lat, mapCenter.lng);
+            const sources = getDiscoverSources(city, mapCenter.lat, mapCenter.lng);
             btn.innerHTML = '<i class="fa-solid fa-compass text-xl"></i>';
             btn.classList.add('ring-4', 'ring-teal-300');
             if (discoverLayer) map.removeLayer(discoverLayer);
@@ -641,25 +664,15 @@
             const radius = 0.007;
             const angles = [90, 162, 234, 306, 18].map(d => d * Math.PI / 180);
             sources.forEach((src, i) => {
-                const pinLat = userCoords.lat + radius * Math.sin(angles[i]);
-                const pinLng = userCoords.lng + radius * Math.cos(angles[i]);
+                const pinLat = mapCenter.lat + radius * Math.sin(angles[i]);
+                const pinLng = mapCenter.lng + radius * Math.cos(angles[i]);
                 const icon = L.divIcon({
                     className: 'custom-div-icon',
-                    html: `<div style="display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer;">
-                        <div style="width:48px;height:48px;border-radius:14px;background:${src.color};display:flex;align-items:center;justify-content:center;color:white;font-size:20px;box-shadow:0 4px 15px rgba(0,0,0,0.25);border:3px solid white;">
-                            <i class="${src.icon}"></i>
-                        </div>
-                        <div style="background:white;padding:2px 8px;border-radius:999px;font-size:10px;font-weight:700;color:#111827;box-shadow:0 2px 8px rgba(0,0,0,0.15);white-space:nowrap;font-family:Inter,sans-serif;">
-                            ${src.name}
-                        </div>
-                    </div>`,
+                    html: `<div style="display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer;"><div style="width:48px;height:48px;border-radius:14px;background:${src.color};display:flex;align-items:center;justify-content:center;color:white;font-size:20px;box-shadow:0 4px 15px rgba(0,0,0,0.25);border:3px solid white;"><i class="${src.icon}"></i></div><div style="background:white;padding:2px 8px;border-radius:999px;font-size:10px;font-weight:700;color:#111827;box-shadow:0 2px 8px rgba(0,0,0,0.15);white-space:nowrap;font-family:Inter,sans-serif;">${src.name}</div></div>`,
                     iconSize: [60, 72], iconAnchor: [30, 36]
                 });
-                L.marker([pinLat, pinLng], { icon, zIndexOffset: 2000 })
-                    .addTo(discoverLayer)
-                    .on('click', () => window.open(src.url, '_blank'));
+                L.marker([pinLat, pinLng], { icon, zIndexOffset: 2000 }).addTo(discoverLayer).on('click', () => window.open(src.url, '_blank'));
             });
-            map.setView([userCoords.lat, userCoords.lng], 14, { animate: true });
             showToast(`Discover sources for ${city} 🧭`);
         }
 
@@ -671,7 +684,6 @@
             btn.innerHTML = '<i class="fa-solid fa-compass text-xl"></i>';
         }
 
-        // ─── Utils ────────────────────────────────────────────────────────────────
         function showLoading(text) { document.getElementById('loading-text').textContent=text; document.getElementById('loading-overlay').classList.remove('hidden'); }
         function hideLoading() { document.getElementById('loading-overlay').classList.add('hidden'); }
         function showToast(message) {
