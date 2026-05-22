@@ -61,7 +61,6 @@
     <main class="flex-1 relative flex flex-col">
 
         <div class="absolute top-4 left-0 right-0 px-4 ui-layer pointer-events-none flex flex-col gap-2">
-
             <div class="pointer-events-auto flex">
                 <div class="relative bg-white/95 backdrop-blur-sm rounded-full shadow-md p-1 border border-gray-200 flex items-center pr-4 pl-1 transition hover:shadow-lg">
                     <div class="bg-gradient-to-br from-indigo-500 to-purple-600 text-white rounded-full w-8 h-8 flex items-center justify-center mr-2 shadow-sm">
@@ -114,6 +113,9 @@
 
         <div id="map-container">
             <div id="map"></div>
+            <button onclick="toggleDiscover()" id="discover-btn" class="absolute bottom-20 right-4 w-12 h-12 bg-gradient-to-r from-teal-500 to-emerald-500 rounded-full shadow-lg flex items-center justify-center text-white hover:scale-105 transition transform ui-layer z-50" title="Discover what's nearby">
+                <i class="fa-solid fa-compass text-xl"></i>
+            </button>
             <button onclick="locateUser()" class="absolute bottom-6 right-4 w-12 h-12 bg-white rounded-full shadow-lg flex items-center justify-center text-gray-600 hover:text-indigo-600 transition ui-layer">
                 <i class="fa-solid fa-location-crosshairs text-xl"></i>
             </button>
@@ -166,10 +168,7 @@
                     </div>
                 </div>
                 <div class="flex items-center gap-2">
-                   <button onclick="loadWeekendIntel()" class="p-2 text-indigo-500 hover:text-indigo-700 transition" title="Refresh"><i class="fa-solid fa-rotate-right text-sm"></i></button>
-                    <a id="uitagenda-link" href="https://www.uitagenda.nl/agenda/den-haag" target="_blank" class="flex items-center gap-1.5 px-3 py-1.5 bg-orange-500 text-white rounded-full text-xs font-bold hover:bg-orange-600 transition no-underline whitespace-nowrap">
-                        <i class="fa-solid fa-calendar-days"></i> Open Uitagenda
-                    </a>
+                    <button onclick="loadWeekendIntel()" class="p-2 text-indigo-500 hover:text-indigo-700 transition" title="Refresh"><i class="fa-solid fa-rotate-right text-sm"></i></button>
                     <button onclick="changeEventsSource('ticketed')" class="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center text-gray-500 hover:bg-gray-200"><i class="fa-solid fa-xmark"></i></button>
                 </div>
             </div>
@@ -204,6 +203,8 @@
         let userCoords          = { lat: 52.0740, lng: 4.3580 };
         let dynamicPlaces       = [];
         let dynamicEvents       = [];
+        let discoverLayer       = null;
+        let discoverActive      = false;
 
         window.onload = () => { initMap(); locateUser(); };
 
@@ -574,7 +575,7 @@
             content.innerHTML = `
                 <div class="flex flex-col items-center justify-center py-10 gap-3 text-gray-400">
                     <div class="w-8 h-8 border-4 border-indigo-200 border-t-indigo-500 rounded-full animate-spin"></div>
-                    <p class="animate-pulse text-center text-sm">Searching uitagenda, Eventbrite NL, local sites…<br>Takes ~10 seconds</p>
+                    <p class="animate-pulse text-center text-sm">Searching uitagenda, Eventbrite, local sites…<br>Takes ~10 seconds</p>
                 </div>`;
             try {
                 const res = await fetch('/api/weekend', {
@@ -600,14 +601,77 @@
                     </div>`;
             }
         }
-function getThisWeekendDate() {
-    const now = new Date();
-    const day = now.getDay();
-    const daysToFri = day <= 5 ? (5 - day) : 0;
-    const fri = new Date(now);
-    fri.setDate(now.getDate() + daysToFri);
-    return fri.toISOString().split('T')[0];
-}
+
+        // ─── Discover Mode ────────────────────────────────────────────────────────
+        async function detectNearestCity(lat, lng) {
+            try {
+                const res = await fetch(
+                    `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json`,
+                    { headers: { 'Accept-Language': 'en' } }
+                );
+                const data = await res.json();
+                return data.address?.city || data.address?.town || data.address?.municipality || 'Den Haag';
+            } catch { return 'Den Haag'; }
+        }
+
+        function getDiscoverSources(city, lat, lng) {
+            const slug = city.toLowerCase().replace(/\s+/g, '-');
+            const tag  = city.toLowerCase().replace(/[\s-]+/g, '');
+            return [
+                { name:'Uitagenda', icon:'fa-solid fa-calendar-days', color:'#F97316', url:`https://www.uitagenda.nl/agenda/${slug}` },
+                { name:'Instagram', icon:'fa-brands fa-instagram',    color:'#E1306C', url:`https://www.instagram.com/explore/tags/${tag}weekend/` },
+                { name:'Facebook',  icon:'fa-brands fa-facebook',     color:'#1877F2', url:`https://www.facebook.com/events/search?q=${encodeURIComponent(city + ' this weekend')}` },
+                { name:'Google Maps', icon:'fa-solid fa-map-location-dot', color:'#4285F4', url:`https://www.google.com/maps/search/events+markets+activities/@${lat},${lng},14z` },
+                { name:'Eventbrite', icon:'fa-solid fa-ticket',       color:'#FF5733', url:`https://www.eventbrite.nl/d/netherlands--${slug}/events--this-weekend/` }
+            ];
+        }
+
+        function toggleDiscover() { discoverActive ? clearDiscoverPins() : loadDiscoverPins(); }
+
+        async function loadDiscoverPins() {
+            const btn = document.getElementById('discover-btn');
+            btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin text-xl"></i>';
+            const city    = await detectNearestCity(userCoords.lat, userCoords.lng);
+            const sources = getDiscoverSources(city, userCoords.lat, userCoords.lng);
+            btn.innerHTML = '<i class="fa-solid fa-compass text-xl"></i>';
+            btn.classList.add('ring-4', 'ring-teal-300');
+            if (discoverLayer) map.removeLayer(discoverLayer);
+            discoverLayer = L.layerGroup().addTo(map);
+            discoverActive = true;
+            const radius = 0.007;
+            const angles = [90, 162, 234, 306, 18].map(d => d * Math.PI / 180);
+            sources.forEach((src, i) => {
+                const pinLat = userCoords.lat + radius * Math.sin(angles[i]);
+                const pinLng = userCoords.lng + radius * Math.cos(angles[i]);
+                const icon = L.divIcon({
+                    className: 'custom-div-icon',
+                    html: `<div style="display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer;">
+                        <div style="width:48px;height:48px;border-radius:14px;background:${src.color};display:flex;align-items:center;justify-content:center;color:white;font-size:20px;box-shadow:0 4px 15px rgba(0,0,0,0.25);border:3px solid white;">
+                            <i class="${src.icon}"></i>
+                        </div>
+                        <div style="background:white;padding:2px 8px;border-radius:999px;font-size:10px;font-weight:700;color:#111827;box-shadow:0 2px 8px rgba(0,0,0,0.15);white-space:nowrap;font-family:Inter,sans-serif;">
+                            ${src.name}
+                        </div>
+                    </div>`,
+                    iconSize: [60, 72], iconAnchor: [30, 36]
+                });
+                L.marker([pinLat, pinLng], { icon, zIndexOffset: 2000 })
+                    .addTo(discoverLayer)
+                    .on('click', () => window.open(src.url, '_blank'));
+            });
+            map.setView([userCoords.lat, userCoords.lng], 14, { animate: true });
+            showToast(`Discover sources for ${city} 🧭`);
+        }
+
+        function clearDiscoverPins() {
+            if (discoverLayer) { map.removeLayer(discoverLayer); discoverLayer = null; }
+            discoverActive = false;
+            const btn = document.getElementById('discover-btn');
+            btn.classList.remove('ring-4', 'ring-teal-300');
+            btn.innerHTML = '<i class="fa-solid fa-compass text-xl"></i>';
+        }
+
+        // ─── Utils ────────────────────────────────────────────────────────────────
         function showLoading(text) { document.getElementById('loading-text').textContent=text; document.getElementById('loading-overlay').classList.remove('hidden'); }
         function hideLoading() { document.getElementById('loading-overlay').classList.add('hidden'); }
         function showToast(message) {
