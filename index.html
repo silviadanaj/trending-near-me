@@ -14,10 +14,7 @@
             theme: {
                 extend: {
                     colors: {
-                        primary: '#4F46E5',
-                        secondary: '#10B981',
-                        dark: '#1F2937',
-                        light: '#F3F4F6'
+                        primary: '#4F46E5', secondary: '#10B981', dark: '#1F2937', light: '#F3F4F6'
                     },
                     fontFamily: { sans: ['Inter', 'sans-serif'] }
                 }
@@ -41,6 +38,8 @@
         .user-pulse { background: rgba(59, 130, 246, 0.4); animation: pulsate 2s ease-out infinite; width: 60px; height: 60px; border-radius: 50%; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: -1; }
         #place-details-sheet { transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); transform: translateY(100%); }
         #place-details-sheet.open { transform: translateY(0); }
+        #weekend-intel-panel { transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); transform: translateY(100%); }
+        #weekend-intel-panel.open { transform: translateY(0); }
         .filter-btn.active { background-color: #4F46E5; color: white; border-color: #4F46E5; }
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
@@ -74,7 +73,6 @@
     <main class="flex-1 relative flex flex-col">
 
         <div class="absolute top-4 left-0 right-0 px-4 ui-layer pointer-events-none flex flex-col gap-3">
-
             <div class="pointer-events-auto flex">
                 <div class="relative bg-white/95 backdrop-blur-sm rounded-full shadow-md p-1 border border-gray-200 flex items-center pr-4 pl-1 transition hover:shadow-lg">
                     <div class="bg-gradient-to-br from-indigo-500 to-purple-600 text-white rounded-full w-8 h-8 flex items-center justify-center mr-2 shadow-sm">
@@ -104,22 +102,15 @@
                 <button onclick="filterCategory('attraction')" id="filter-attraction" class="filter-btn whitespace-nowrap px-4 py-2 bg-white text-gray-700 rounded-full shadow-md text-sm font-medium border border-gray-200 hover:bg-gray-50 transition flex items-center gap-2">
                     <i class="fa-solid fa-camera text-blue-500"></i> Sights
                 </button>
-                <button onclick="filterCategory('events')" id="filter-events" class="filter-btn flex-shrink-0 whitespace-nowrap px-4 py-2 bg-white text-gray-700 rounded-full shadow-md text-sm font-medium border border-gray-200 hover:bg-gray-50 transition flex items-center gap-2">
+                <button onclick="filterCategory('events')" id="filter-events" class="filter-btn whitespace-nowrap px-4 py-2 bg-white text-gray-700 rounded-full shadow-md text-sm font-medium border border-gray-200 hover:bg-gray-50 transition flex items-center gap-2">
                     <i class="fa-solid fa-ticket text-pink-600"></i> Events
                 </button>
             </div>
 
-            <!-- Date-window selector — only shown when Events is active -->
             <div id="date-window-row" class="hidden space-x-2 overflow-x-auto no-scrollbar pb-2 pointer-events-auto">
-                <button onclick="changeDateWindow('today')" id="dw-today" class="dw-btn whitespace-nowrap px-4 py-1.5 bg-white text-gray-700 rounded-full shadow text-xs font-semibold border border-gray-200 hover:bg-gray-50 transition">
-                    Today
-                </button>
-                <button onclick="changeDateWindow('weekend')" id="dw-weekend" class="dw-btn active whitespace-nowrap px-4 py-1.5 bg-pink-600 text-white rounded-full shadow text-xs font-semibold border border-pink-600 transition">
-                    This Weekend
-                </button>
-                <button onclick="changeDateWindow('week')" id="dw-week" class="dw-btn whitespace-nowrap px-4 py-1.5 bg-white text-gray-700 rounded-full shadow text-xs font-semibold border border-gray-200 hover:bg-gray-50 transition">
-                    Next 7 Days
-                </button>
+                <button onclick="changeDateWindow('today')" id="dw-today" class="dw-btn whitespace-nowrap px-4 py-1.5 bg-white text-gray-700 rounded-full shadow text-xs font-semibold border border-gray-200 hover:bg-gray-50 transition">Today</button>
+                <button onclick="changeDateWindow('weekend')" id="dw-weekend" class="dw-btn active whitespace-nowrap px-4 py-1.5 bg-pink-600 text-white rounded-full shadow text-xs font-semibold border border-pink-600 transition">This Weekend</button>
+                <button onclick="changeDateWindow('week')" id="dw-week" class="dw-btn whitespace-nowrap px-4 py-1.5 bg-white text-gray-700 rounded-full shadow text-xs font-semibold border border-gray-200 hover:bg-gray-50 transition">Next 7 Days</button>
             </div>
         </div>
 
@@ -133,14 +124,17 @@
             <button onclick="toggleChat()" class="absolute bottom-6 left-4 w-12 h-12 bg-gradient-to-r from-purple-500 to-indigo-600 rounded-full shadow-[0_0_15px_rgba(168,85,247,0.5)] flex items-center justify-center text-white hover:scale-105 transition transform ui-layer z-50">
                 <i class="fa-solid fa-sparkles text-xl"></i>
             </button>
+
+            <button onclick="toggleWeekendIntel()" class="absolute bottom-6 left-1/2 transform -translate-x-1/2 bg-white border-2 border-indigo-200 rounded-full shadow-lg flex items-center gap-2 px-4 py-2.5 text-indigo-700 hover:bg-indigo-50 transition ui-layer z-50 font-bold text-sm whitespace-nowrap">
+                <i class="fa-solid fa-magnifying-glass-location text-indigo-500"></i>
+                Weekend Intel
+            </button>
         </div>
 
         <div id="ai-chat-window" class="absolute bottom-20 left-4 w-80 max-w-[calc(100vw-32px)] bg-white rounded-2xl shadow-2xl flex flex-col overflow-hidden transition-all duration-300 transform translate-y-8 opacity-0 pointer-events-none ui-layer z-50" style="height: 380px; max-height: 50vh;">
             <div class="bg-gradient-to-r from-purple-600 to-indigo-600 p-3 text-white flex justify-between items-center shadow-md z-10">
                 <div class="flex items-center gap-2">
-                    <div class="bg-white/20 p-1.5 rounded-lg">
-                        <i class="fa-solid fa-robot text-sm"></i>
-                    </div>
+                    <div class="bg-white/20 p-1.5 rounded-lg"><i class="fa-solid fa-robot text-sm"></i></div>
                     <span class="font-bold text-sm">Local AI Concierge</span>
                 </div>
                 <button onclick="toggleChat()" class="text-white hover:text-purple-200 transition">
@@ -149,7 +143,7 @@
             </div>
             <div id="chat-messages" class="flex-1 p-4 overflow-y-auto bg-slate-50 flex flex-col gap-3 text-sm">
                 <div class="bg-purple-100 text-purple-900 p-3 rounded-2xl rounded-tl-sm self-start max-w-[85%] shadow-sm border border-purple-200">
-                    Hey! I'm scanning live places and events near you. What kind of vibe are you looking for right now? ✨
+                    Hey! I'm scanning live places and events near you. What kind of vibe are you looking for? ✨
                 </div>
             </div>
             <div class="p-3 bg-white border-t border-gray-100 flex items-center gap-2">
@@ -173,6 +167,30 @@
             </div>
         </div>
 
+        <!-- Weekend Intel Panel -->
+        <div id="weekend-intel-panel" class="absolute bottom-0 left-0 right-0 bg-white rounded-t-3xl shadow-[0_-10px_40px_rgba(0,0,0,0.15)] flex flex-col ui-layer" style="max-height: 75vh;">
+            <div class="w-full flex justify-between items-center px-6 pt-5 pb-3 border-b border-gray-100">
+                <div class="flex items-center gap-3">
+                    <div class="bg-indigo-100 text-indigo-600 p-2 rounded-xl">
+                        <i class="fa-solid fa-magnifying-glass-location"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-bold text-gray-900 text-base">Weekend Intel</h3>
+                        <p id="weekend-subtitle" class="text-xs text-gray-400">AI scan of local listings &amp; socials</p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-2">
+                    <button onclick="loadWeekendIntel()" class="p-2 text-indigo-500 hover:text-indigo-700 transition" title="Refresh">
+                        <i class="fa-solid fa-rotate-right text-sm"></i>
+                    </button>
+                    <button onclick="toggleWeekendIntel()" class="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center text-gray-500 hover:bg-gray-200">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                </div>
+            </div>
+            <div id="weekend-content" class="flex-1 overflow-y-auto px-6 py-5 text-sm text-gray-700 leading-relaxed"></div>
+        </div>
+
         <div id="loading-overlay" class="absolute inset-0 bg-white/80 backdrop-blur-sm flex flex-col items-center justify-center hidden ui-layer">
             <div class="w-12 h-12 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin mb-4"></div>
             <p id="loading-text" class="text-gray-700 font-medium animate-pulse">Finding your location...</p>
@@ -183,56 +201,37 @@
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 
     <script>
-        let map;
-        let userMarker;
-        let placeMarkersLayer;
+        let map, userMarker, placeMarkersLayer;
         let currentFilter     = 'all';
         let currentVibe       = 'any';
         let currentDateWindow = 'weekend';
-        let userCoords        = { lat: 52.0740, lng: 4.3580 }; // Default: Voorburg
+        let userCoords        = { lat: 52.0740, lng: 4.3580 };
         let dynamicPlaces     = [];
         let dynamicEvents     = [];
 
-        window.onload = () => {
-            initMap();
-            locateUser();
-        };
+        window.onload = () => { initMap(); locateUser(); };
 
         function initMap() {
             map = L.map('map', { zoomControl: false }).setView([userCoords.lat, userCoords.lng], 14);
             L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-                attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
-                maxZoom: 19
+                attribution: '&copy; OpenStreetMap contributors &copy; CARTO', maxZoom: 19
             }).addTo(map);
             placeMarkersLayer = L.layerGroup().addTo(map);
         }
 
         function locateUser() {
             showLoading('Finding your location...');
-            if (!('geolocation' in navigator)) {
-                onLocationReady();
-                return;
-            }
+            if (!('geolocation' in navigator)) { onLocationReady(); return; }
             navigator.geolocation.getCurrentPosition(
-                position => {
-                    userCoords = { lat: position.coords.latitude, lng: position.coords.longitude };
-                    onLocationReady();
-                },
-                () => {
-                    showToast('Using default location (Voorburg).');
-                    onLocationReady();
-                },
+                pos => { userCoords = { lat: pos.coords.latitude, lng: pos.coords.longitude }; onLocationReady(); },
+                ()  => { showToast('Using default location (Voorburg).'); onLocationReady(); },
                 { timeout: 10000, enableHighAccuracy: true }
             );
         }
 
         async function onLocationReady() {
             updateUserLocationOnMap();
-            if (currentFilter === 'events') {
-                await loadEventsFromAPI();
-            } else {
-                await loadPlacesFromAPI();
-            }
+            if (currentFilter === 'events') { await loadEventsFromAPI(); } else { await loadPlacesFromAPI(); }
             hideLoading();
         }
 
@@ -241,228 +240,142 @@
             const userIcon = L.divIcon({
                 className: 'custom-div-icon',
                 html: `<div style="position:relative;"><div class="user-pulse"></div><div class="user-location-marker"></div></div>`,
-                iconSize: [20, 20],
-                iconAnchor: [10, 10]
+                iconSize: [20, 20], iconAnchor: [10, 10]
             });
-            if (userMarker) {
-                userMarker.setLatLng([userCoords.lat, userCoords.lng]);
-            } else {
-                userMarker = L.marker([userCoords.lat, userCoords.lng], { icon: userIcon, zIndexOffset: 1000 }).addTo(map);
-            }
+            if (userMarker) { userMarker.setLatLng([userCoords.lat, userCoords.lng]); }
+            else { userMarker = L.marker([userCoords.lat, userCoords.lng], { icon: userIcon, zIndexOffset: 1000 }).addTo(map); }
         }
 
         async function loadPlacesFromAPI() {
             showLoading('Scanning trending spots nearby...');
             try {
-                const url = `/api/places?lat=${userCoords.lat}&lng=${userCoords.lng}&category=${currentFilter}`;
-                const response = await fetch(url);
-                if (!response.ok) throw new Error(`HTTP ${response.status}`);
-                const data = await response.json();
-
-                if (data.places && data.places.length > 0) {
-                    dynamicPlaces = data.places;
-                    renderMarkers();
-                    showToast(`Found ${dynamicPlaces.length} trending spots nearby!`);
-                } else {
-                    showToast('No places found nearby. Try a different area.');
-                }
-            } catch (error) {
-                console.error('Places fetch error:', error);
-                showToast('Could not load places. Check your connection.');
-            }
+                const res = await fetch(`/api/places?lat=${userCoords.lat}&lng=${userCoords.lng}&category=${currentFilter}`);
+                if (!res.ok) throw new Error();
+                const data = await res.json();
+                if (data.places?.length) { dynamicPlaces = data.places; renderMarkers(); showToast(`Found ${dynamicPlaces.length} trending spots!`); }
+                else { showToast('No places found nearby.'); }
+            } catch { showToast('Could not load places.'); }
         }
 
-        // Fetch real events from the Ticketmaster proxy
         async function loadEventsFromAPI() {
             showLoading('Finding events near you...');
             try {
-                const url = `/api/events?lat=${userCoords.lat}&lng=${userCoords.lng}&window=${currentDateWindow}`;
-                const response = await fetch(url);
-                if (!response.ok) throw new Error(`HTTP ${response.status}`);
-                const data = await response.json();
-
+                const res = await fetch(`/api/events?lat=${userCoords.lat}&lng=${userCoords.lng}&window=${currentDateWindow}`);
+                if (!res.ok) throw new Error();
+                const data = await res.json();
                 dynamicEvents = data.events || [];
                 renderMarkers();
-
-                if (dynamicEvents.length > 0) {
-                    showToast(`Found ${dynamicEvents.length} event${dynamicEvents.length > 1 ? 's' : ''}!`);
-                } else {
-                    showToast('No ticketed events found nearby for this window.');
-                }
-            } catch (error) {
-                console.error('Events fetch error:', error);
-                showToast('Could not load events. Check your connection.');
-            }
+                showToast(dynamicEvents.length ? `Found ${dynamicEvents.length} events!` : 'No ticketed events found for this window.');
+            } catch { showToast('Could not load events.'); }
             hideLoading();
         }
 
         async function callGemini(userPrompt, systemPrompt) {
             try {
-                const response = await fetch('/api/gemini', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                const res = await fetch('/api/gemini', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ userPrompt, systemPrompt })
                 });
-                if (!response.ok) throw new Error(`HTTP ${response.status}`);
-                const data = await response.json();
-                return data.text || "Hmm, the AI couldn't formulate a response.";
-            } catch (error) {
-                console.error('Gemini proxy error:', error);
-                return "The AI is taking a quick coffee break. Try again in a moment!";
-            }
+                if (!res.ok) throw new Error();
+                const data = await res.json();
+                return data.text || "Hmm, couldn't get a response.";
+            } catch { return "The AI is taking a coffee break. Try again!"; }
         }
 
-        const getCategoryConfig = (category) => {
-            switch (category) {
-                case 'cafe':       return { color: '#D97706', icon: 'fa-mug-hot' };
-                case 'restaurant': return { color: '#F97316', icon: 'fa-utensils' };
-                case 'attraction': return { color: '#3B82F6', icon: 'fa-camera' };
-                default:           return { color: '#4F46E5', icon: 'fa-map-pin' };
-            }
-        };
+        const getCategoryConfig = cat => ({
+            cafe:       { color: '#D97706', icon: 'fa-mug-hot' },
+            restaurant: { color: '#F97316', icon: 'fa-utensils' },
+            attraction: { color: '#3B82F6', icon: 'fa-camera' }
+        }[cat] || { color: '#4F46E5', icon: 'fa-map-pin' });
 
         function renderMarkers() {
             placeMarkersLayer.clearLayers();
-            if (currentFilter === 'events') {
-                renderEventMarkers();
-            } else {
-                renderPlaceMarkers();
-            }
+            currentFilter === 'events' ? renderEventMarkers() : renderPlaceMarkers();
         }
 
         function renderEventMarkers() {
-            const eventColor = '#DB2777'; // pink — distinct from place categories
-
+            const C = '#DB2777';
             dynamicEvents.forEach(ev => {
-                const label = ev.name.length > 22 ? ev.name.slice(0, 22) + '…' : ev.name;
+                const label = ev.name.length > 22 ? ev.name.slice(0,22)+'…' : ev.name;
                 const icon = L.divIcon({
                     className: 'custom-div-icon',
-                    html: `
-                        <div class="map-marker">
-                            <div class="marker-pulse" style="background:${eventColor}40;"></div>
-                            <div class="marker-pin" style="background:${eventColor};">
-                                <i class="fa-solid fa-ticket marker-icon"></i>
-                            </div>
-                            <div class="absolute top-[40px] left-1/2 transform -translate-x-1/2 bg-white px-2 py-0.5 rounded text-xs font-bold shadow whitespace-nowrap text-gray-800">
-                                ${label}
-                            </div>
-                        </div>`,
-                    iconSize: [40, 40],
-                    iconAnchor: [20, 40]
+                    html: `<div class="map-marker"><div class="marker-pulse" style="background:${C}40;"></div><div class="marker-pin" style="background:${C};"><i class="fa-solid fa-ticket marker-icon"></i></div><div class="absolute top-[40px] left-1/2 transform -translate-x-1/2 bg-white px-2 py-0.5 rounded text-xs font-bold shadow whitespace-nowrap text-gray-800">${label}</div></div>`,
+                    iconSize: [40,40], iconAnchor: [20,40]
                 });
-
-                L.marker([ev.lat, ev.lng], { icon })
-                    .addTo(placeMarkersLayer)
-                    .on('click', () => {
-                        map.setView([ev.lat, ev.lng], 16, { animate: true });
-                        openEventDetails(ev.id);
-                    });
+                L.marker([ev.lat, ev.lng], { icon }).addTo(placeMarkersLayer)
+                    .on('click', () => { map.setView([ev.lat, ev.lng], 16, { animate: true }); openEventDetails(ev.id); });
             });
         }
 
         function renderPlaceMarkers() {
-            const filtered = dynamicPlaces.filter(p => {
-                const matchCat  = currentFilter === 'all' || p.category === currentFilter;
-                const matchVibe = currentVibe === 'any'   || p.vibes.includes(currentVibe);
-                return matchCat && matchVibe;
-            });
-
-            filtered.forEach(place => {
-                const config    = getCategoryConfig(place.category);
-                const scale     = place.trendScore > 90 ? 1.1 : (place.trendScore > 75 ? 1 : 0.9);
-                const pulseHtml = place.trendScore > 80
-                    ? `<div class="marker-pulse" style="background:${config.color}40;"></div>` : '';
-                const trendBadge = place.trendScore > 85
-                    ? `<div class="marker-trend"><i class="fa-solid fa-arrow-trend-up"></i></div>` : '';
-
+            dynamicPlaces.filter(p => {
+                return (currentFilter === 'all' || p.category === currentFilter) &&
+                       (currentVibe === 'any' || p.vibes.includes(currentVibe));
+            }).forEach(place => {
+                const config = getCategoryConfig(place.category);
+                const scale = place.trendScore > 90 ? 1.1 : place.trendScore > 75 ? 1 : 0.9;
+                const pulse = place.trendScore > 80 ? `<div class="marker-pulse" style="background:${config.color}40;"></div>` : '';
+                const badge = place.trendScore > 85 ? `<div class="marker-trend"><i class="fa-solid fa-arrow-trend-up"></i></div>` : '';
                 const icon = L.divIcon({
                     className: 'custom-div-icon',
-                    html: `
-                        <div class="map-marker" style="transform:scale(${scale});">
-                            ${pulseHtml}
-                            <div class="marker-pin" style="background:${config.color};">
-                                <i class="fa-solid ${config.icon} marker-icon"></i>
-                            </div>
-                            ${trendBadge}
-                            <div class="absolute top-[40px] left-1/2 transform -translate-x-1/2 bg-white px-2 py-0.5 rounded text-xs font-bold shadow whitespace-nowrap text-gray-800">
-                                ${place.name}
-                            </div>
-                        </div>`,
-                    iconSize: [40, 40],
-                    iconAnchor: [20, 40]
+                    html: `<div class="map-marker" style="transform:scale(${scale});">${pulse}<div class="marker-pin" style="background:${config.color};"><i class="fa-solid ${config.icon} marker-icon"></i></div>${badge}<div class="absolute top-[40px] left-1/2 transform -translate-x-1/2 bg-white px-2 py-0.5 rounded text-xs font-bold shadow whitespace-nowrap text-gray-800">${place.name}</div></div>`,
+                    iconSize: [40,40], iconAnchor: [20,40]
                 });
-
-                L.marker([place.lat, place.lng], { icon })
-                    .addTo(placeMarkersLayer)
-                    .on('click', () => {
-                        map.setView([place.lat, place.lng], 16, { animate: true });
-                        openPlaceDetails(place.id);
-                    });
+                L.marker([place.lat, place.lng], { icon }).addTo(placeMarkersLayer)
+                    .on('click', () => { map.setView([place.lat, place.lng], 16, { animate: true }); openPlaceDetails(place.id); });
             });
         }
 
-        // ─── UI Interactions ──────────────────────────────────────────────────────
         function filterCategory(category) {
             currentFilter = category;
-            document.querySelectorAll('.filter-btn').forEach(btn => {
-                btn.classList.remove('active', 'bg-indigo-600', 'text-white', 'border-indigo-600', 'bg-pink-600', 'border-pink-600');
-                btn.classList.add('bg-white', 'text-gray-700', 'border-gray-200');
+            document.querySelectorAll('.filter-btn').forEach(b => {
+                b.classList.remove('active','bg-indigo-600','text-white','border-indigo-600','bg-pink-600','border-pink-600');
+                b.classList.add('bg-white','text-gray-700','border-gray-200');
             });
-            const activeBtn = document.getElementById(`filter-${category}`);
-            activeBtn.classList.remove('bg-white', 'text-gray-700', 'border-gray-200');
-
+            const btn = document.getElementById(`filter-${category}`);
+            btn.classList.remove('bg-white','text-gray-700','border-gray-200');
             const dateRow = document.getElementById('date-window-row');
             closePlaceDetails();
-
             if (category === 'events') {
-                activeBtn.classList.add('active', 'bg-pink-600', 'text-white', 'border-pink-600');
-                dateRow.classList.remove('hidden');
-                dateRow.classList.add('flex');
+                btn.classList.add('active','bg-pink-600','text-white','border-pink-600');
+                dateRow.classList.remove('hidden'); dateRow.classList.add('flex');
                 loadEventsFromAPI();
             } else {
-                activeBtn.classList.add('active', 'bg-indigo-600', 'text-white', 'border-indigo-600');
-                dateRow.classList.add('hidden');
-                dateRow.classList.remove('flex');
+                btn.classList.add('active','bg-indigo-600','text-white','border-indigo-600');
+                dateRow.classList.add('hidden'); dateRow.classList.remove('flex');
                 renderMarkers();
             }
         }
 
-        function changeDateWindow(window) {
-            currentDateWindow = window;
-            document.querySelectorAll('.dw-btn').forEach(btn => {
-                btn.classList.remove('active', 'bg-pink-600', 'text-white', 'border-pink-600');
-                btn.classList.add('bg-white', 'text-gray-700', 'border-gray-200');
+        function changeDateWindow(w) {
+            currentDateWindow = w;
+            document.querySelectorAll('.dw-btn').forEach(b => {
+                b.classList.remove('active','bg-pink-600','text-white','border-pink-600');
+                b.classList.add('bg-white','text-gray-700','border-gray-200');
             });
-            const activeBtn = document.getElementById(`dw-${window}`);
-            activeBtn.classList.remove('bg-white', 'text-gray-700', 'border-gray-200');
-            activeBtn.classList.add('active', 'bg-pink-600', 'text-white', 'border-pink-600');
-            closePlaceDetails();
-            loadEventsFromAPI();
+            const btn = document.getElementById(`dw-${w}`);
+            btn.classList.remove('bg-white','text-gray-700','border-gray-200');
+            btn.classList.add('active','bg-pink-600','text-white','border-pink-600');
+            closePlaceDetails(); loadEventsFromAPI();
         }
 
         function changeVibe(vibe) {
-            currentVibe = vibe;
-            closePlaceDetails();
-            renderMarkers();
-            const labels = { any: 'All Vibes', family: 'Family-Friendly', date: 'Date Night', friends: 'Group Outings', solo: 'Solo Adventures' };
+            currentVibe = vibe; closePlaceDetails(); renderMarkers();
+            const labels = { any:'All Vibes', family:'Family-Friendly', date:'Date Night', friends:'Group Outings', solo:'Solo Adventures' };
             showToast(`Filtering for: ${labels[vibe]}`);
         }
 
         function openPlaceDetails(id) {
             const place = dynamicPlaces.find(p => p.id === id);
             if (!place) return;
-
             const config = getCategoryConfig(place.category);
             const content = document.getElementById('place-content');
-
             content.innerHTML = `
                 <div class="flex justify-between items-start mb-4">
                     <div>
                         <div class="flex items-center gap-2 mb-1">
                             <span class="px-2 py-0.5 rounded text-xs font-bold text-white uppercase tracking-wider" style="background-color:${config.color}">${place.category}</span>
-                            <span class="text-sm font-medium text-red-500 flex items-center gap-1 bg-red-50 px-2 py-0.5 rounded">
-                                <i class="fa-solid fa-fire"></i> Trending
-                            </span>
+                            <span class="text-sm font-medium text-red-500 flex items-center gap-1 bg-red-50 px-2 py-0.5 rounded"><i class="fa-solid fa-fire"></i> Trending</span>
                         </div>
                         <h2 class="text-2xl font-bold text-gray-900 leading-tight">${place.name}</h2>
                         <div class="flex items-center gap-1 mt-1 text-sm text-gray-600">
@@ -470,56 +383,38 @@
                             <span class="font-bold text-gray-800">${place.rating}</span>
                             <span>(${place.reviews.toLocaleString()})</span>
                             <span class="mx-1">•</span>
-                            <span class="${place.openNow ? 'text-green-600' : 'text-red-500'} font-medium">${place.openNow ? 'Open' : 'Closed'}</span>
+                            <span class="${place.openNow?'text-green-600':'text-red-500'} font-medium">${place.openNow?'Open':'Closed'}</span>
                         </div>
                     </div>
-                    <button onclick="closePlaceDetails()" class="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center text-gray-500 hover:bg-gray-200">
-                        <i class="fa-solid fa-xmark"></i>
-                    </button>
+                    <button onclick="closePlaceDetails()" class="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center text-gray-500 hover:bg-gray-200"><i class="fa-solid fa-xmark"></i></button>
                 </div>
-
                 <div class="bg-indigo-50 border border-indigo-100 rounded-xl p-3 mb-4 flex items-start gap-3">
-                    <div class="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 flex-shrink-0 mt-0.5">
-                        <i class="fa-solid fa-bolt"></i>
-                    </div>
+                    <div class="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 flex-shrink-0 mt-0.5"><i class="fa-solid fa-bolt"></i></div>
                     <div>
                         <p class="text-xs font-bold text-indigo-800 uppercase tracking-wide">Why it's trending</p>
                         <p class="text-sm text-indigo-900 font-medium">${place.trendReason}</p>
                     </div>
                 </div>
-
                 <div class="bg-gradient-to-r from-purple-50 to-fuchsia-50 border border-purple-100 rounded-xl p-3 mb-4 flex items-start gap-3 shadow-sm">
-                    <div class="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-fuchsia-500 flex items-center justify-center text-white flex-shrink-0 mt-0.5 shadow-sm">
-                        <i class="fa-solid fa-wand-magic-sparkles text-xs"></i>
-                    </div>
+                    <div class="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-fuchsia-500 flex items-center justify-center text-white flex-shrink-0 mt-0.5 shadow-sm"><i class="fa-solid fa-wand-magic-sparkles text-xs"></i></div>
                     <div class="w-full">
                         <p class="text-[10px] font-extrabold text-purple-800 uppercase tracking-widest mb-0.5">AI Vibe Check</p>
                         <p id="ai-vibe-text" class="text-sm text-purple-900 font-medium animate-pulse">Consulting the local AI...</p>
                     </div>
                 </div>
-
-                <img src="${place.image}" alt="${place.name}" class="w-full h-48 object-cover rounded-xl mb-4 shadow-sm"
-                     onerror="this.src='https://placehold.co/600x400/e2e8f0/475569?text=${encodeURIComponent(place.name)}'">
-
-                <p class="text-gray-700 mb-4 text-sm leading-relaxed">${place.description || place.address}</p>
-
+                <img src="${place.image}" alt="${place.name}" class="w-full h-48 object-cover rounded-xl mb-4 shadow-sm" onerror="this.src='https://placehold.co/600x400/e2e8f0/475569?text=${encodeURIComponent(place.name)}'">
+                <p class="text-gray-700 mb-4 text-sm leading-relaxed">${place.description||place.address}</p>
                 <div class="flex gap-3 mt-auto pb-4">
-                    <a href="https://www.google.com/maps/dir/?api=1&destination=${place.lat},${place.lng}"
-                       target="_blank"
-                       class="flex-1 bg-indigo-600 text-white py-3 rounded-xl font-bold shadow-md hover:bg-indigo-700 transition flex items-center justify-center gap-2 text-center no-underline">
+                    <a href="https://www.google.com/maps/dir/?api=1&destination=${place.lat},${place.lng}" target="_blank" class="flex-1 bg-indigo-600 text-white py-3 rounded-xl font-bold shadow-md hover:bg-indigo-700 transition flex items-center justify-center gap-2 text-center no-underline">
                         <i class="fa-solid fa-route"></i> Go Here
                     </a>
                     <button onclick="sharePlace('${encodeURIComponent(place.name)}')" class="w-12 h-12 border border-gray-200 text-gray-600 rounded-xl flex items-center justify-center hover:bg-gray-50 transition">
                         <i class="fa-solid fa-share-nodes"></i>
                     </button>
-                </div>
-            `;
-
+                </div>`;
             document.getElementById('sheet-empty-state').classList.add('hidden');
-            content.classList.remove('hidden');
-            content.classList.add('flex');
+            content.classList.remove('hidden'); content.classList.add('flex');
             document.getElementById('place-details-sheet').classList.add('open');
-
             generateVibeCheck(place);
         }
 
@@ -530,18 +425,14 @@
         function openEventDetails(id) {
             const ev = dynamicEvents.find(e => e.id === id);
             if (!ev) return;
-
-            const eventColor = '#DB2777';
+            const C = '#DB2777';
             const content = document.getElementById('place-content');
-
             content.innerHTML = `
                 <div class="flex justify-between items-start mb-4">
                     <div>
                         <div class="flex items-center gap-2 mb-1">
-                            <span class="px-2 py-0.5 rounded text-xs font-bold text-white uppercase tracking-wider" style="background-color:${eventColor}">${ev.segment}</span>
-                            <span class="text-sm font-medium text-pink-600 flex items-center gap-1 bg-pink-50 px-2 py-0.5 rounded">
-                                <i class="fa-solid fa-ticket"></i> Event
-                            </span>
+                            <span class="px-2 py-0.5 rounded text-xs font-bold text-white uppercase tracking-wider" style="background-color:${C}">${ev.segment}</span>
+                            <span class="text-sm font-medium text-pink-600 flex items-center gap-1 bg-pink-50 px-2 py-0.5 rounded"><i class="fa-solid fa-ticket"></i> Event</span>
                         </div>
                         <h2 class="text-2xl font-bold text-gray-900 leading-tight">${ev.name}</h2>
                         <div class="flex items-center gap-2 mt-1 text-sm text-gray-600">
@@ -549,184 +440,122 @@
                             <span class="font-bold text-gray-800">${ev.dateLabel}</span>
                         </div>
                     </div>
-                    <button onclick="closePlaceDetails()" class="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center text-gray-500 hover:bg-gray-200">
-                        <i class="fa-solid fa-xmark"></i>
-                    </button>
+                    <button onclick="closePlaceDetails()" class="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center text-gray-500 hover:bg-gray-200"><i class="fa-solid fa-xmark"></i></button>
                 </div>
-
                 <div class="bg-pink-50 border border-pink-100 rounded-xl p-3 mb-4 flex items-start gap-3">
-                    <div class="w-8 h-8 rounded-full bg-pink-100 flex items-center justify-center text-pink-600 flex-shrink-0 mt-0.5">
-                        <i class="fa-solid fa-location-dot"></i>
-                    </div>
+                    <div class="w-8 h-8 rounded-full bg-pink-100 flex items-center justify-center text-pink-600 flex-shrink-0 mt-0.5"><i class="fa-solid fa-location-dot"></i></div>
                     <div>
                         <p class="text-xs font-bold text-pink-800 uppercase tracking-wide">Where</p>
-                        <p class="text-sm text-pink-900 font-medium">${ev.venue}${ev.address ? ' · ' + ev.address : ''}</p>
+                        <p class="text-sm text-pink-900 font-medium">${ev.venue}${ev.address?' · '+ev.address:''}</p>
                     </div>
                 </div>
-
                 <div class="bg-gradient-to-r from-purple-50 to-fuchsia-50 border border-purple-100 rounded-xl p-3 mb-4 flex items-start gap-3 shadow-sm">
-                    <div class="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-fuchsia-500 flex items-center justify-center text-white flex-shrink-0 mt-0.5 shadow-sm">
-                        <i class="fa-solid fa-wand-magic-sparkles text-xs"></i>
-                    </div>
+                    <div class="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-fuchsia-500 flex items-center justify-center text-white flex-shrink-0 mt-0.5 shadow-sm"><i class="fa-solid fa-wand-magic-sparkles text-xs"></i></div>
                     <div class="w-full">
                         <p class="text-[10px] font-extrabold text-purple-800 uppercase tracking-widest mb-0.5">AI Vibe Check</p>
                         <p id="ai-vibe-text" class="text-sm text-purple-900 font-medium animate-pulse">Consulting the local AI...</p>
                     </div>
                 </div>
-
-                <img src="${ev.image}" alt="${ev.name}" class="w-full h-48 object-cover rounded-xl mb-4 shadow-sm"
-                     onerror="this.src='https://placehold.co/600x400/db2777/ffffff?text=${encodeURIComponent(ev.segment)}'">
-
-                ${ev.price ? `<p class="text-gray-700 mb-4 text-sm"><span class="font-bold">Tickets from</span> ${ev.price}</p>` : ''}
-
+                <img src="${ev.image}" alt="${ev.name}" class="w-full h-48 object-cover rounded-xl mb-4 shadow-sm" onerror="this.src='https://placehold.co/600x400/db2777/ffffff?text=${encodeURIComponent(ev.segment)}'">
+                ${ev.price?`<p class="text-gray-700 mb-4 text-sm"><span class="font-bold">Tickets from</span> ${ev.price}</p>`:''}
                 <div class="flex gap-3 mt-auto pb-4">
-                    ${ev.url ? `<a href="${ev.url}" target="_blank" class="flex-1 bg-pink-600 text-white py-3 rounded-xl font-bold shadow-md hover:bg-pink-700 transition flex items-center justify-center gap-2 text-center no-underline">
-                        <i class="fa-solid fa-ticket"></i> Get Tickets
-                    </a>` : ''}
-                    <a href="https://www.google.com/maps/dir/?api=1&destination=${ev.lat},${ev.lng}" target="_blank"
-                       class="w-12 h-12 border border-gray-200 text-gray-600 rounded-xl flex items-center justify-center hover:bg-gray-50 transition no-underline">
-                        <i class="fa-solid fa-route"></i>
-                    </a>
-                </div>
-            `;
-
+                    ${ev.url?`<a href="${ev.url}" target="_blank" class="flex-1 bg-pink-600 text-white py-3 rounded-xl font-bold shadow-md hover:bg-pink-700 transition flex items-center justify-center gap-2 text-center no-underline"><i class="fa-solid fa-ticket"></i> Get Tickets</a>`:''}
+                    <a href="https://www.google.com/maps/dir/?api=1&destination=${ev.lat},${ev.lng}" target="_blank" class="w-12 h-12 border border-gray-200 text-gray-600 rounded-xl flex items-center justify-center hover:bg-gray-50 transition no-underline"><i class="fa-solid fa-route"></i></a>
+                </div>`;
             document.getElementById('sheet-empty-state').classList.add('hidden');
-            content.classList.remove('hidden');
-            content.classList.add('flex');
+            content.classList.remove('hidden'); content.classList.add('flex');
             document.getElementById('place-details-sheet').classList.add('open');
-
             generateEventVibeCheck(ev);
         }
 
         async function generateEventVibeCheck(ev) {
-            const vibeTextEl = document.getElementById('ai-vibe-text');
-            if (!vibeTextEl) return;
-
-            const vibeLabels = { any: 'Just exploring', date: 'Looking for a date-night plan', family: 'Out with the kids', friends: 'Hanging with friends', solo: 'Flying solo' };
-            const systemPrompt = 'You are a hip, local trend-spotter. Write a punchy, 1-2 sentence take on whether this event is worth going to, tailored to the user. Use an emoji or two. Keep it short and exciting.';
-            const userPrompt = `Event: ${ev.name}\nType: ${ev.segment}\nVenue: ${ev.venue}\nWhen: ${ev.dateLabel}\nUser context: ${vibeLabels[currentVibe] || 'Just exploring'}\n\nGive a personalized vibe check!`;
-
-            const response = await callGemini(userPrompt, systemPrompt);
-
+            const el = document.getElementById('ai-vibe-text');
+            if (!el) return;
+            const vibeLabels = { any:'Just exploring', date:'Date-night plan', family:'Out with the kids', friends:'Hanging with friends', solo:'Flying solo' };
+            const text = await callGemini(
+                `Event: ${ev.name}\nType: ${ev.segment}\nVenue: ${ev.venue}\nWhen: ${ev.dateLabel}\nUser: ${vibeLabels[currentVibe]||'Just exploring'}\n\nGive a punchy 1-2 sentence vibe check with an emoji or two!`,
+                'You are a hip local trend-spotter. Write short, punchy, exciting recommendations.'
+            );
             if (document.getElementById('place-details-sheet').classList.contains('open') && document.getElementById('ai-vibe-text')) {
-                vibeTextEl.classList.remove('animate-pulse');
-                vibeTextEl.innerHTML = response.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>');
+                el.classList.remove('animate-pulse');
+                el.innerHTML = text.replace(/\*\*(.*?)\*\*/g,'<b>$1</b>');
             }
         }
 
         function sharePlace(encodedName) {
-            if (navigator.share) {
-                navigator.share({ title: `Trending: ${decodeURIComponent(encodedName)}`, url: window.location.href });
-            } else {
-                navigator.clipboard.writeText(window.location.href);
-                showToast('Link copied!');
-            }
+            if (navigator.share) { navigator.share({ title:`Trending: ${decodeURIComponent(encodedName)}`, url: window.location.href }); }
+            else { navigator.clipboard.writeText(window.location.href); showToast('Link copied!'); }
         }
 
         async function generateVibeCheck(place) {
-            const vibeTextEl = document.getElementById('ai-vibe-text');
-            if (!vibeTextEl) return;
-
-            const vibeLabels = { any: 'Just exploring', date: 'Looking for a date spot', family: 'Out with the kids', friends: 'Hanging with friends', solo: 'Flying solo' };
-            const systemPrompt = 'You are a hip, local trend-spotter. Write a punchy, 1-2 sentence personalized recommendation. Use an emoji or two. Keep it conversational, short, and exciting.';
-            const userPrompt = `Place: ${place.name}\nCategory: ${place.category}\nDescription: ${place.description}\nTrending because: ${place.trendReason}\nUser context: ${vibeLabels[currentVibe] || 'Just exploring'}\n\nGive a personalized vibe check!`;
-
-            const response = await callGemini(userPrompt, systemPrompt);
-
+            const el = document.getElementById('ai-vibe-text');
+            if (!el) return;
+            const vibeLabels = { any:'Just exploring', date:'Looking for a date spot', family:'Out with the kids', friends:'Hanging with friends', solo:'Flying solo' };
+            const text = await callGemini(
+                `Place: ${place.name}\nCategory: ${place.category}\nDescription: ${place.description}\nTrending because: ${place.trendReason}\nUser: ${vibeLabels[currentVibe]||'Just exploring'}\n\nGive a punchy 1-2 sentence vibe check with an emoji or two!`,
+                'You are a hip local trend-spotter. Write short, punchy, exciting recommendations.'
+            );
             if (document.getElementById('place-details-sheet').classList.contains('open') && document.getElementById('ai-vibe-text')) {
-                vibeTextEl.classList.remove('animate-pulse');
-                vibeTextEl.innerHTML = response.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>');
+                el.classList.remove('animate-pulse');
+                el.innerHTML = text.replace(/\*\*(.*?)\*\*/g,'<b>$1</b>');
             }
         }
 
-        function toggleChat() {
-            document.getElementById('ai-chat-window').classList.toggle('open');
-        }
+        function toggleChat() { document.getElementById('ai-chat-window').classList.toggle('open'); }
 
         async function sendChatMessage() {
             const inputEl = document.getElementById('chat-input');
             const message = inputEl.value.trim();
             if (!message) return;
-
             inputEl.value = '';
             appendMessage('user', message);
             const typingId = appendTypingIndicator();
-
             let mapContext, systemPrompt;
-
             if (currentFilter === 'events') {
-                mapContext = dynamicEvents.length
-                    ? dynamicEvents.map(e => `- ${e.name} (${e.segment}) at ${e.venue}, ${e.dateLabel}`).join('\n')
-                    : 'No events currently on the map for this date window.';
-                systemPrompt = `You are a helpful, enthusiastic AI concierge for a 'Trending Near Me' app. Keep answers short (1–3 sentences), conversational, and useful. Here are the live events currently on the user's map:\n\n${mapContext}\n\nHelp them pick something to do, or give general local advice for broader questions.`;
+                mapContext = dynamicEvents.length ? dynamicEvents.map(e=>`- ${e.name} (${e.segment}) at ${e.venue}, ${e.dateLabel}`).join('\n') : 'No events on map.';
+                systemPrompt = `You are a helpful AI concierge for a Trending Near Me app. Keep answers short (1–3 sentences). Live events on map:\n\n${mapContext}`;
             } else {
-                const visiblePlaces = dynamicPlaces.filter(p => {
-                    const matchCat  = currentFilter === 'all' || p.category === currentFilter;
-                    const matchVibe = currentVibe === 'any'   || p.vibes.includes(currentVibe);
-                    return matchCat && matchVibe;
-                });
-                mapContext = visiblePlaces.length
-                    ? visiblePlaces.map(p => `- ${p.name} (${p.category}, ${p.rating}★): ${p.trendReason}`).join('\n')
-                    : 'No places matching current filters.';
-                systemPrompt = `You are a helpful, enthusiastic AI concierge for a 'Trending Near Me' app. Keep answers short (1–3 sentences), conversational, and useful. Here are the live trending places currently on the user's map:\n\n${mapContext}\n\nRecommend from these if relevant, or give general local advice for broader questions.`;
+                const vis = dynamicPlaces.filter(p=>(currentFilter==='all'||p.category===currentFilter)&&(currentVibe==='any'||p.vibes.includes(currentVibe)));
+                mapContext = vis.length ? vis.map(p=>`- ${p.name} (${p.category}, ${p.rating}★): ${p.trendReason}`).join('\n') : 'No places on map.';
+                systemPrompt = `You are a helpful AI concierge for a Trending Near Me app. Keep answers short (1–3 sentences). Live places on map:\n\n${mapContext}`;
             }
-
             const responseText = await callGemini(message, systemPrompt);
             removeElement(typingId);
             appendMessage('bot', responseText);
         }
 
         function appendMessage(sender, text) {
-            const chatMessages = document.getElementById('chat-messages');
-            const msgDiv = document.createElement('div');
-            msgDiv.className = sender === 'user'
+            const msgs = document.getElementById('chat-messages');
+            const div = document.createElement('div');
+            div.className = sender==='user'
                 ? 'bg-indigo-600 text-white p-3 rounded-2xl rounded-tr-sm self-end max-w-[85%] shadow-sm'
                 : 'bg-white text-gray-800 border border-gray-200 p-3 rounded-2xl rounded-tl-sm self-start max-w-[90%] shadow-sm';
-            msgDiv.innerHTML = text.replace(/\*\*(.*?)\*\*/g, '<b class="font-bold">$1</b>');
-            chatMessages.appendChild(msgDiv);
-            chatMessages.scrollTop = chatMessages.scrollHeight;
+            div.innerHTML = text.replace(/\*\*(.*?)\*\*/g,'<b class="font-bold">$1</b>');
+            msgs.appendChild(div); msgs.scrollTop = msgs.scrollHeight;
         }
 
         function appendTypingIndicator() {
-            const chatMessages = document.getElementById('chat-messages');
-            const typingDiv = document.createElement('div');
+            const msgs = document.getElementById('chat-messages');
+            const div = document.createElement('div');
             const id = 'typing-' + Date.now();
-            typingDiv.id = id;
-            typingDiv.className = 'bg-white border border-gray-200 p-3 rounded-2xl rounded-tl-sm self-start shadow-sm flex gap-1 items-center h-10';
-            typingDiv.innerHTML = `
-                <div class="w-1.5 h-1.5 bg-purple-500 rounded-full typing-dot"></div>
-                <div class="w-1.5 h-1.5 bg-purple-500 rounded-full typing-dot"></div>
-                <div class="w-1.5 h-1.5 bg-purple-500 rounded-full typing-dot"></div>`;
-            chatMessages.appendChild(typingDiv);
-            chatMessages.scrollTop = chatMessages.scrollHeight;
+            div.id = id;
+            div.className = 'bg-white border border-gray-200 p-3 rounded-2xl rounded-tl-sm self-start shadow-sm flex gap-1 items-center h-10';
+            div.innerHTML = `<div class="w-1.5 h-1.5 bg-purple-500 rounded-full typing-dot"></div><div class="w-1.5 h-1.5 bg-purple-500 rounded-full typing-dot"></div><div class="w-1.5 h-1.5 bg-purple-500 rounded-full typing-dot"></div>`;
+            msgs.appendChild(div); msgs.scrollTop = msgs.scrollHeight;
             return id;
         }
 
-        function removeElement(id) {
-            const el = document.getElementById(id);
-            if (el) el.remove();
-        }
+        function removeElement(id) { const el = document.getElementById(id); if(el) el.remove(); }
 
         async function refreshData() {
             closePlaceDetails();
-            if (currentFilter === 'events') {
-                await loadEventsFromAPI();
-                showToast('Events refreshed!');
-            } else {
-                showLoading('Scanning for fresh trends...');
-                await loadPlacesFromAPI();
-                hideLoading();
-                showToast('Trending data refreshed!');
-            }
+            if (currentFilter === 'events') { await loadEventsFromAPI(); showToast('Events refreshed!'); }
+            else { showLoading('Scanning for fresh trends...'); await loadPlacesFromAPI(); hideLoading(); showToast('Trending data refreshed!'); }
         }
 
-        function showLoading(text) {
-            document.getElementById('loading-text').textContent = text;
-            document.getElementById('loading-overlay').classList.remove('hidden');
-        }
-        function hideLoading() {
-            document.getElementById('loading-overlay').classList.add('hidden');
-        }
+        function showLoading(text) { document.getElementById('loading-text').textContent = text; document.getElementById('loading-overlay').classList.remove('hidden'); }
+        function hideLoading() { document.getElementById('loading-overlay').classList.add('hidden'); }
+
         function showToast(message) {
             const toast = document.createElement('div');
             toast.className = 'absolute top-20 left-1/2 transform -translate-x-1/2 bg-gray-800 text-white px-4 py-2 rounded-full text-sm font-medium shadow-lg ui-layer transition-opacity duration-300 whitespace-nowrap';
@@ -734,6 +563,42 @@
             document.body.appendChild(toast);
             setTimeout(() => { toast.style.opacity = '0'; }, 2000);
             setTimeout(() => { toast.remove(); }, 2300);
+        }
+
+        // ─── Weekend Intel ────────────────────────────────────────────────────────
+        let weekendIntelLoaded = false;
+
+        function toggleWeekendIntel() {
+            const panel = document.getElementById('weekend-intel-panel');
+            const isOpen = panel.classList.contains('open');
+            closePlaceDetails();
+            if (isOpen) { panel.classList.remove('open'); }
+            else { panel.classList.add('open'); if (!weekendIntelLoaded) loadWeekendIntel(); }
+        }
+
+        async function loadWeekendIntel() {
+            const content  = document.getElementById('weekend-content');
+            const subtitle = document.getElementById('weekend-subtitle');
+            weekendIntelLoaded = false;
+            content.innerHTML = `<div class="flex flex-col items-center justify-center py-10 gap-3 text-gray-400"><div class="w-8 h-8 border-4 border-indigo-200 border-t-indigo-500 rounded-full animate-spin"></div><p class="animate-pulse text-center text-sm">Scanning local listings, socials &amp; city pages…</p></div>`;
+            try {
+                const res = await fetch('/api/weekend', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ lat: userCoords.lat, lng: userCoords.lng })
+                });
+                if (!res.ok) throw new Error();
+                const data = await res.json();
+                subtitle.textContent = data.weekend || 'This weekend';
+                const html = (data.intel || 'Nothing found.')
+                    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                    .replace(/\*(.*?)\*/g, '<em>$1</em>')
+                    .split('\n').map(l=>l.trim()).filter(Boolean)
+                    .map(l=>`<p class="mb-3">${l}</p>`).join('');
+                content.innerHTML = html;
+                weekendIntelLoaded = true;
+            } catch {
+                content.innerHTML = `<div class="flex flex-col items-center justify-center py-10 gap-2 text-gray-400"><i class="fa-solid fa-wifi-slash text-2xl"></i><p class="text-center text-sm">Couldn't load weekend intel.<br>Try again.</p><button onclick="loadWeekendIntel()" class="mt-2 px-4 py-2 bg-indigo-600 text-white rounded-full text-xs font-bold hover:bg-indigo-700 transition">Try Again</button></div>`;
+            }
         }
     </script>
 </body>
