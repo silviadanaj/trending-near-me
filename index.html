@@ -583,7 +583,20 @@
             const isOpen = panel.classList.contains('open');
             closePlaceDetails();
             if (isOpen) { panel.classList.remove('open'); }
-            else { panel.classList.add('open'); if (!weekendIntelLoaded) loadWeekendIntel(); }
+          else { panel.classList.add('open'); if (!weekendIntelLoaded) loadWeekendIntel(); }
+        }
+
+        function changeWICity(city) {
+            currentWICity = city;
+            document.querySelectorAll('.wic-btn').forEach(b => {
+                b.classList.remove('active', 'bg-indigo-600', 'text-white', 'border-indigo-600');
+                b.classList.add('bg-white', 'text-gray-600', 'border-gray-200');
+            });
+            const id = 'wic-' + city.toLowerCase().replace(/\s+/g, '');
+            const btn = document.getElementById(id);
+            if (btn) { btn.classList.remove('bg-white','text-gray-600','border-gray-200'); btn.classList.add('active','bg-indigo-600','text-white','border-indigo-600'); }
+            weekendIntelLoaded = false;
+            loadWeekendIntel();
         }
 
         async function loadWeekendIntel() {
