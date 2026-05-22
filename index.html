@@ -4,60 +4,48 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Trending Near Me</title>
-    
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
-    
     <script>
         tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        primary: '#4F46E5', secondary: '#10B981', dark: '#1F2937', light: '#F3F4F6'
-                    },
-                    fontFamily: { sans: ['Inter', 'sans-serif'] }
-                }
-            }
+            theme: { extend: { colors: { primary:'#4F46E5', secondary:'#10B981', dark:'#1F2937', light:'#F3F4F6' }, fontFamily:{ sans:['Inter','sans-serif'] } } }
         }
     </script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
-        body { font-family: 'Inter', sans-serif; overflow: hidden; }
-        #map-container { height: calc(100vh - 64px); width: 100%; position: relative; }
-        #map { height: 100%; width: 100%; z-index: 1; }
-        .custom-div-icon { background: transparent; border: none; }
-        .map-marker { position: relative; cursor: pointer; transition: transform 0.2s ease; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; }
-        .map-marker:hover { transform: scale(1.1); }
-        .marker-pin { width: 30px; height: 30px; border-radius: 50% 50% 50% 0; position: absolute; transform: rotate(-45deg); box-shadow: -1px 1px 4px rgba(0,0,0,0.4); display: flex; align-items: center; justify-content: center; }
-        .marker-icon { transform: rotate(45deg); color: white; font-size: 14px; }
-        .marker-pulse { border-radius: 50%; height: 50px; width: 50px; position: absolute; z-index: -1; animation: pulsate 1.5s ease-out infinite; }
-        .marker-trend { position: absolute; top: -5px; right: -5px; background: #ef4444; color: white; border-radius: 50%; width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: bold; box-shadow: 0 2px 4px rgba(0,0,0,0.2); z-index: 15; border: 2px solid white; }
-        @keyframes pulsate { 0% { transform: scale(0.5); opacity: 0.8; } 100% { transform: scale(1.5); opacity: 0; } }
-        .user-location-marker { width: 20px; height: 20px; background-color: #3b82f6; border: 3px solid white; border-radius: 50%; box-shadow: 0 0 10px rgba(0,0,0,0.5); position: relative; }
-        .user-pulse { background: rgba(59, 130, 246, 0.4); animation: pulsate 2s ease-out infinite; width: 60px; height: 60px; border-radius: 50%; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: -1; }
-        #place-details-sheet { transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); transform: translateY(100%); }
-        #place-details-sheet.open { transform: translateY(0); }
-        #weekend-intel-panel { transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); transform: translateY(100%); }
-        #weekend-intel-panel.open { transform: translateY(0); }
-        .filter-btn.active { background-color: #4F46E5; color: white; border-color: #4F46E5; }
-        .no-scrollbar::-webkit-scrollbar { display: none; }
-        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-        .ui-layer { z-index: 400; }
-        #ai-chat-window.open { transform: translateY(0); opacity: 1; pointer-events: auto; }
-        .typing-dot { animation: typing 1.4s infinite ease-in-out both; }
-        .typing-dot:nth-child(1) { animation-delay: -0.32s; }
-        .typing-dot:nth-child(2) { animation-delay: -0.16s; }
-        @keyframes typing { 0%, 80%, 100% { transform: scale(0); } 40% { transform: scale(1); } }
+        body { font-family:'Inter',sans-serif; overflow:hidden; }
+        #map-container { height:calc(100vh - 64px); width:100%; position:relative; }
+        #map { height:100%; width:100%; z-index:1; }
+        .custom-div-icon { background:transparent; border:none; }
+        .map-marker { position:relative; cursor:pointer; transition:transform 0.2s ease; width:40px; height:40px; display:flex; align-items:center; justify-content:center; }
+        .map-marker:hover { transform:scale(1.1); }
+        .marker-pin { width:30px; height:30px; border-radius:50% 50% 50% 0; position:absolute; transform:rotate(-45deg); box-shadow:-1px 1px 4px rgba(0,0,0,0.4); display:flex; align-items:center; justify-content:center; }
+        .marker-icon { transform:rotate(45deg); color:white; font-size:14px; }
+        .marker-pulse { border-radius:50%; height:50px; width:50px; position:absolute; z-index:-1; animation:pulsate 1.5s ease-out infinite; }
+        .marker-trend { position:absolute; top:-5px; right:-5px; background:#ef4444; color:white; border-radius:50%; width:20px; height:20px; display:flex; align-items:center; justify-content:center; font-size:10px; font-weight:bold; box-shadow:0 2px 4px rgba(0,0,0,0.2); z-index:15; border:2px solid white; }
+        @keyframes pulsate { 0%{transform:scale(0.5);opacity:0.8;} 100%{transform:scale(1.5);opacity:0;} }
+        .user-location-marker { width:20px; height:20px; background-color:#3b82f6; border:3px solid white; border-radius:50%; box-shadow:0 0 10px rgba(0,0,0,0.5); position:relative; }
+        .user-pulse { background:rgba(59,130,246,0.4); animation:pulsate 2s ease-out infinite; width:60px; height:60px; border-radius:50%; position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); z-index:-1; }
+        #place-details-sheet { transition:transform 0.3s cubic-bezier(0.4,0,0.2,1); transform:translateY(100%); }
+        #place-details-sheet.open { transform:translateY(0); }
+        #weekend-intel-panel { transition:transform 0.3s cubic-bezier(0.4,0,0.2,1); transform:translateY(100%); }
+        #weekend-intel-panel.open { transform:translateY(0); }
+        .filter-btn.active { background-color:#4F46E5; color:white; border-color:#4F46E5; }
+        .no-scrollbar::-webkit-scrollbar { display:none; }
+        .no-scrollbar { -ms-overflow-style:none; scrollbar-width:none; }
+        .ui-layer { z-index:400; }
+        #ai-chat-window.open { transform:translateY(0); opacity:1; pointer-events:auto; }
+        .typing-dot { animation:typing 1.4s infinite ease-in-out both; }
+        .typing-dot:nth-child(1){animation-delay:-0.32s;} .typing-dot:nth-child(2){animation-delay:-0.16s;}
+        @keyframes typing { 0%,80%,100%{transform:scale(0);} 40%{transform:scale(1);} }
     </style>
 </head>
 <body class="bg-gray-100 text-gray-800 flex flex-col h-screen">
 
     <header class="bg-white shadow-sm relative h-16 flex items-center justify-between px-4 ui-layer">
         <div class="flex items-center gap-2">
-            <div class="bg-indigo-100 text-indigo-600 p-2 rounded-lg">
-                <i class="fa-solid fa-map-location-dot"></i>
-            </div>
+            <div class="bg-indigo-100 text-indigo-600 p-2 rounded-lg"><i class="fa-solid fa-map-location-dot"></i></div>
             <h1 class="text-xl font-bold text-gray-900">Trending<span class="text-indigo-600">NearMe</span></h1>
         </div>
         <div class="flex items-center gap-3">
@@ -72,7 +60,8 @@
 
     <main class="flex-1 relative flex flex-col">
 
-        <div class="absolute top-4 left-0 right-0 px-4 ui-layer pointer-events-none flex flex-col gap-3">
+        <div class="absolute top-4 left-0 right-0 px-4 ui-layer pointer-events-none flex flex-col gap-2">
+
             <div class="pointer-events-auto flex">
                 <div class="relative bg-white/95 backdrop-blur-sm rounded-full shadow-md p-1 border border-gray-200 flex items-center pr-4 pl-1 transition hover:shadow-lg">
                     <div class="bg-gradient-to-br from-indigo-500 to-purple-600 text-white rounded-full w-8 h-8 flex items-center justify-center mr-2 shadow-sm">
@@ -89,7 +78,7 @@
                 </div>
             </div>
 
-            <div class="flex space-x-2 overflow-x-auto no-scrollbar pb-2 pointer-events-auto">
+            <div class="flex space-x-2 overflow-x-auto no-scrollbar pb-1 pointer-events-auto">
                 <button onclick="filterCategory('all')" id="filter-all" class="filter-btn active whitespace-nowrap px-4 py-2 bg-white text-gray-700 rounded-full shadow-md text-sm font-medium border border-gray-200 hover:bg-gray-50 transition flex items-center gap-2">
                     <i class="fa-solid fa-fire text-red-500"></i> All
                 </button>
@@ -107,47 +96,47 @@
                 </button>
             </div>
 
-            <div id="date-window-row" class="hidden space-x-2 overflow-x-auto no-scrollbar pb-2 pointer-events-auto">
+            <div id="date-window-row" class="hidden space-x-2 overflow-x-auto no-scrollbar pb-1 pointer-events-auto">
                 <button onclick="changeDateWindow('today')" id="dw-today" class="dw-btn whitespace-nowrap px-4 py-1.5 bg-white text-gray-700 rounded-full shadow text-xs font-semibold border border-gray-200 hover:bg-gray-50 transition">Today</button>
                 <button onclick="changeDateWindow('weekend')" id="dw-weekend" class="dw-btn active whitespace-nowrap px-4 py-1.5 bg-pink-600 text-white rounded-full shadow text-xs font-semibold border border-pink-600 transition">This Weekend</button>
                 <button onclick="changeDateWindow('week')" id="dw-week" class="dw-btn whitespace-nowrap px-4 py-1.5 bg-white text-gray-700 rounded-full shadow text-xs font-semibold border border-gray-200 hover:bg-gray-50 transition">Next 7 Days</button>
+            </div>
+
+            <div id="events-source-row" class="hidden space-x-2 overflow-x-auto no-scrollbar pb-1 pointer-events-auto">
+                <button onclick="changeEventsSource('ticketed')" id="es-ticketed" class="es-btn active whitespace-nowrap px-4 py-1.5 bg-pink-600 text-white rounded-full shadow text-xs font-semibold border border-pink-600 transition flex items-center gap-1.5">
+                    <i class="fa-solid fa-ticket"></i> Ticketed
+                </button>
+                <button onclick="changeEventsSource('ai')" id="es-ai" class="es-btn whitespace-nowrap px-4 py-1.5 bg-white text-gray-700 rounded-full shadow text-xs font-semibold border border-gray-200 hover:bg-gray-50 transition flex items-center gap-1.5">
+                    <i class="fa-solid fa-magnifying-glass-location text-indigo-500"></i> AI Scan
+                </button>
             </div>
         </div>
 
         <div id="map-container">
             <div id="map"></div>
-
             <button onclick="locateUser()" class="absolute bottom-6 right-4 w-12 h-12 bg-white rounded-full shadow-lg flex items-center justify-center text-gray-600 hover:text-indigo-600 transition ui-layer">
                 <i class="fa-solid fa-location-crosshairs text-xl"></i>
             </button>
-
             <button onclick="toggleChat()" class="absolute bottom-6 left-4 w-12 h-12 bg-gradient-to-r from-purple-500 to-indigo-600 rounded-full shadow-[0_0_15px_rgba(168,85,247,0.5)] flex items-center justify-center text-white hover:scale-105 transition transform ui-layer z-50">
                 <i class="fa-solid fa-sparkles text-xl"></i>
             </button>
-
-            <button onclick="toggleWeekendIntel()" class="absolute bottom-6 left-1/2 transform -translate-x-1/2 bg-white border-2 border-indigo-200 rounded-full shadow-lg flex items-center gap-2 px-4 py-2.5 text-indigo-700 hover:bg-indigo-50 transition ui-layer z-50 font-bold text-sm whitespace-nowrap">
-                <i class="fa-solid fa-magnifying-glass-location text-indigo-500"></i>
-                Weekend Intel
-            </button>
         </div>
 
-        <div id="ai-chat-window" class="absolute bottom-20 left-4 w-80 max-w-[calc(100vw-32px)] bg-white rounded-2xl shadow-2xl flex flex-col overflow-hidden transition-all duration-300 transform translate-y-8 opacity-0 pointer-events-none ui-layer z-50" style="height: 380px; max-height: 50vh;">
+        <div id="ai-chat-window" class="absolute bottom-20 left-4 w-80 max-w-[calc(100vw-32px)] bg-white rounded-2xl shadow-2xl flex flex-col overflow-hidden transition-all duration-300 transform translate-y-8 opacity-0 pointer-events-none ui-layer z-50" style="height:380px;max-height:50vh;">
             <div class="bg-gradient-to-r from-purple-600 to-indigo-600 p-3 text-white flex justify-between items-center shadow-md z-10">
                 <div class="flex items-center gap-2">
                     <div class="bg-white/20 p-1.5 rounded-lg"><i class="fa-solid fa-robot text-sm"></i></div>
                     <span class="font-bold text-sm">Local AI Concierge</span>
                 </div>
-                <button onclick="toggleChat()" class="text-white hover:text-purple-200 transition">
-                    <i class="fa-solid fa-xmark text-lg"></i>
-                </button>
+                <button onclick="toggleChat()" class="text-white hover:text-purple-200 transition"><i class="fa-solid fa-xmark text-lg"></i></button>
             </div>
             <div id="chat-messages" class="flex-1 p-4 overflow-y-auto bg-slate-50 flex flex-col gap-3 text-sm">
                 <div class="bg-purple-100 text-purple-900 p-3 rounded-2xl rounded-tl-sm self-start max-w-[85%] shadow-sm border border-purple-200">
-                    Hey! I'm scanning live places and events near you. What kind of vibe are you looking for? ✨
+                    Hey! I'm scanning live places and events near you. What are you looking for? ✨
                 </div>
             </div>
             <div class="p-3 bg-white border-t border-gray-100 flex items-center gap-2">
-                <input type="text" id="chat-input" placeholder="e.g., What's on this weekend?" class="flex-1 bg-gray-100 rounded-full px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 transition" onkeypress="if(event.key === 'Enter') sendChatMessage()">
+                <input type="text" id="chat-input" placeholder="e.g., What's on this weekend?" class="flex-1 bg-gray-100 rounded-full px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 transition" onkeypress="if(event.key==='Enter')sendChatMessage()">
                 <button onclick="sendChatMessage()" class="w-9 h-9 bg-purple-600 text-white rounded-full flex items-center justify-center hover:bg-purple-700 transition shadow-sm">
                     <i class="fa-solid fa-paper-plane text-xs relative right-0.5"></i>
                 </button>
@@ -167,37 +156,30 @@
             </div>
         </div>
 
-        <!-- Weekend Intel Panel -->
-        <div id="weekend-intel-panel" class="absolute bottom-0 left-0 right-0 bg-white rounded-t-3xl shadow-[0_-10px_40px_rgba(0,0,0,0.15)] flex flex-col ui-layer" style="max-height: 75vh;">
-            <div class="w-full flex justify-between items-center px-6 pt-5 pb-3 border-b border-gray-100">
+        <div id="weekend-intel-panel" class="absolute bottom-0 left-0 right-0 bg-white rounded-t-3xl shadow-[0_-10px_40px_rgba(0,0,0,0.15)] flex flex-col ui-layer" style="max-height:78vh;">
+            <div class="flex justify-between items-center px-6 pt-5 pb-3 border-b border-gray-100 flex-shrink-0">
                 <div class="flex items-center gap-3">
-                    <div class="bg-indigo-100 text-indigo-600 p-2 rounded-xl">
-                        <i class="fa-solid fa-magnifying-glass-location"></i>
-                    </div>
+                    <div class="bg-indigo-100 text-indigo-600 p-2 rounded-xl"><i class="fa-solid fa-magnifying-glass-location"></i></div>
                     <div>
-                        <h3 class="font-bold text-gray-900 text-base">Weekend Intel</h3>
-                        <p id="weekend-subtitle" class="text-xs text-gray-400">AI scan of local listings &amp; socials</p>
+                        <h3 class="font-bold text-gray-900 text-base">AI Weekend Scan</h3>
+                        <p id="weekend-subtitle" class="text-xs text-gray-400">Searching local listings &amp; Dutch sites…</p>
                     </div>
                 </div>
                 <div class="flex items-center gap-2">
-                    <button onclick="loadWeekendIntel()" class="p-2 text-indigo-500 hover:text-indigo-700 transition" title="Refresh">
-                        <i class="fa-solid fa-rotate-right text-sm"></i>
-                    </button>
-                    <button onclick="toggleWeekendIntel()" class="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center text-gray-500 hover:bg-gray-200">
-                        <i class="fa-solid fa-xmark"></i>
-                    </button>
+                    <button onclick="loadWeekendIntel()" class="p-2 text-indigo-500 hover:text-indigo-700 transition" title="Refresh"><i class="fa-solid fa-rotate-right text-sm"></i></button>
+                    <button onclick="changeEventsSource('ticketed')" class="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center text-gray-500 hover:bg-gray-200"><i class="fa-solid fa-xmark"></i></button>
                 </div>
             </div>
-          <!-- City selector -->
-            <div class="flex gap-1.5 overflow-x-auto no-scrollbar py-3 px-6 border-b border-gray-100">
-                <button onclick="changeWICity('The Hague')" id="wic-thehague" class="wic-btn active whitespace-nowrap px-3 py-1 bg-indigo-600 text-white rounded-full text-xs font-semibold border border-indigo-600 transition">The Hague</button>
+            <div class="flex gap-2 overflow-x-auto no-scrollbar px-6 py-3 border-b border-gray-100 flex-shrink-0">
+                <button onclick="changeWICity('Den Haag')" id="wic-denhaag" class="wic-btn active whitespace-nowrap px-3 py-1 bg-indigo-600 text-white rounded-full text-xs font-semibold border border-indigo-600 transition">Den Haag</button>
                 <button onclick="changeWICity('Amsterdam')" id="wic-amsterdam" class="wic-btn whitespace-nowrap px-3 py-1 bg-white text-gray-600 rounded-full text-xs font-semibold border border-gray-200 hover:bg-gray-50 transition">Amsterdam</button>
                 <button onclick="changeWICity('Rotterdam')" id="wic-rotterdam" class="wic-btn whitespace-nowrap px-3 py-1 bg-white text-gray-600 rounded-full text-xs font-semibold border border-gray-200 hover:bg-gray-50 transition">Rotterdam</button>
                 <button onclick="changeWICity('Utrecht')" id="wic-utrecht" class="wic-btn whitespace-nowrap px-3 py-1 bg-white text-gray-600 rounded-full text-xs font-semibold border border-gray-200 hover:bg-gray-50 transition">Utrecht</button>
                 <button onclick="changeWICity('Leiden')" id="wic-leiden" class="wic-btn whitespace-nowrap px-3 py-1 bg-white text-gray-600 rounded-full text-xs font-semibold border border-gray-200 hover:bg-gray-50 transition">Leiden</button>
                 <button onclick="changeWICity('Delft')" id="wic-delft" class="wic-btn whitespace-nowrap px-3 py-1 bg-white text-gray-600 rounded-full text-xs font-semibold border border-gray-200 hover:bg-gray-50 transition">Delft</button>
+                <button onclick="changeWICity('Haarlem')" id="wic-haarlem" class="wic-btn whitespace-nowrap px-3 py-1 bg-white text-gray-600 rounded-full text-xs font-semibold border border-gray-200 hover:bg-gray-50 transition">Haarlem</button>
             </div>
-            <div id="weekend-content" class="flex-1 overflow-y-auto px-6 py-5 text-sm text-gray-700 leading-relaxed"></div>
+            <div id="weekend-content" class="flex-1 overflow-y-auto px-6 py-4 text-sm text-gray-700 leading-relaxed"></div>
         </div>
 
         <div id="loading-overlay" class="absolute inset-0 bg-white/80 backdrop-blur-sm flex flex-col items-center justify-center hidden ui-layer">
@@ -208,16 +190,17 @@
     </main>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
-
     <script>
         let map, userMarker, placeMarkersLayer;
-        let currentFilter     = 'all';
-        let currentVibe       = 'any';
-        let currentDateWindow = 'weekend';
-        let userCoords        = { lat: 52.0740, lng: 4.3580 };
-        let dynamicPlaces     = [];
-        let dynamicEvents     = [];
-        let currentWICity     = 'The Hague';
+        let currentFilter       = 'all';
+        let currentVibe         = 'any';
+        let currentDateWindow   = 'weekend';
+        let currentEventsSource = 'ticketed';
+        let currentWICity       = 'Den Haag';
+        let weekendIntelLoaded  = false;
+        let userCoords          = { lat: 52.0740, lng: 4.3580 };
+        let dynamicPlaces       = [];
+        let dynamicEvents       = [];
 
         window.onload = () => { initMap(); locateUser(); };
 
@@ -241,7 +224,7 @@
 
         async function onLocationReady() {
             updateUserLocationOnMap();
-            if (currentFilter === 'events') { await loadEventsFromAPI(); } else { await loadPlacesFromAPI(); }
+            await loadPlacesFromAPI();
             hideLoading();
         }
 
@@ -250,10 +233,10 @@
             const userIcon = L.divIcon({
                 className: 'custom-div-icon',
                 html: `<div style="position:relative;"><div class="user-pulse"></div><div class="user-location-marker"></div></div>`,
-                iconSize: [20, 20], iconAnchor: [10, 10]
+                iconSize: [20,20], iconAnchor: [10,10]
             });
-            if (userMarker) { userMarker.setLatLng([userCoords.lat, userCoords.lng]); }
-            else { userMarker = L.marker([userCoords.lat, userCoords.lng], { icon: userIcon, zIndexOffset: 1000 }).addTo(map); }
+            if (userMarker) userMarker.setLatLng([userCoords.lat, userCoords.lng]);
+            else userMarker = L.marker([userCoords.lat, userCoords.lng], { icon: userIcon, zIndexOffset: 1000 }).addTo(map);
         }
 
         async function loadPlacesFromAPI() {
@@ -263,7 +246,7 @@
                 if (!res.ok) throw new Error();
                 const data = await res.json();
                 if (data.places?.length) { dynamicPlaces = data.places; renderMarkers(); showToast(`Found ${dynamicPlaces.length} trending spots!`); }
-                else { showToast('No places found nearby.'); }
+                else showToast('No places found nearby.');
             } catch { showToast('Could not load places.'); }
         }
 
@@ -275,7 +258,7 @@
                 const data = await res.json();
                 dynamicEvents = data.events || [];
                 renderMarkers();
-                showToast(dynamicEvents.length ? `Found ${dynamicEvents.length} events!` : 'No ticketed events found for this window.');
+                showToast(dynamicEvents.length ? `Found ${dynamicEvents.length} events!` : 'No ticketed events found. Try AI Scan!');
             } catch { showToast('Could not load events.'); }
             hideLoading();
         }
@@ -287,16 +270,11 @@
                     body: JSON.stringify({ userPrompt, systemPrompt })
                 });
                 if (!res.ok) throw new Error();
-                const data = await res.json();
-                return data.text || "Hmm, couldn't get a response.";
-            } catch { return "The AI is taking a coffee break. Try again!"; }
+                return (await res.json()).text || "Hmm, couldn't get a response.";
+            } catch { return "The AI is on a coffee break. Try again!"; }
         }
 
-        const getCategoryConfig = cat => ({
-            cafe:       { color: '#D97706', icon: 'fa-mug-hot' },
-            restaurant: { color: '#F97316', icon: 'fa-utensils' },
-            attraction: { color: '#3B82F6', icon: 'fa-camera' }
-        }[cat] || { color: '#4F46E5', icon: 'fa-map-pin' });
+        const getCategoryConfig = cat => ({ cafe:{color:'#D97706',icon:'fa-mug-hot'}, restaurant:{color:'#F97316',icon:'fa-utensils'}, attraction:{color:'#3B82F6',icon:'fa-camera'} }[cat] || {color:'#4F46E5',icon:'fa-map-pin'});
 
         function renderMarkers() {
             placeMarkersLayer.clearLayers();
@@ -310,29 +288,29 @@
                 const icon = L.divIcon({
                     className: 'custom-div-icon',
                     html: `<div class="map-marker"><div class="marker-pulse" style="background:${C}40;"></div><div class="marker-pin" style="background:${C};"><i class="fa-solid fa-ticket marker-icon"></i></div><div class="absolute top-[40px] left-1/2 transform -translate-x-1/2 bg-white px-2 py-0.5 rounded text-xs font-bold shadow whitespace-nowrap text-gray-800">${label}</div></div>`,
-                    iconSize: [40,40], iconAnchor: [20,40]
+                    iconSize:[40,40], iconAnchor:[20,40]
                 });
-                L.marker([ev.lat, ev.lng], { icon }).addTo(placeMarkersLayer)
-                    .on('click', () => { map.setView([ev.lat, ev.lng], 16, { animate: true }); openEventDetails(ev.id); });
+                L.marker([ev.lat, ev.lng], {icon}).addTo(placeMarkersLayer)
+                    .on('click', () => { map.setView([ev.lat,ev.lng],16,{animate:true}); openEventDetails(ev.id); });
             });
         }
 
         function renderPlaceMarkers() {
-            dynamicPlaces.filter(p => {
-                return (currentFilter === 'all' || p.category === currentFilter) &&
-                       (currentVibe === 'any' || p.vibes.includes(currentVibe));
-            }).forEach(place => {
-                const config = getCategoryConfig(place.category);
-                const scale = place.trendScore > 90 ? 1.1 : place.trendScore > 75 ? 1 : 0.9;
-                const pulse = place.trendScore > 80 ? `<div class="marker-pulse" style="background:${config.color}40;"></div>` : '';
-                const badge = place.trendScore > 85 ? `<div class="marker-trend"><i class="fa-solid fa-arrow-trend-up"></i></div>` : '';
+            dynamicPlaces.filter(p =>
+                (currentFilter==='all'||p.category===currentFilter) &&
+                (currentVibe==='any'||p.vibes.includes(currentVibe))
+            ).forEach(place => {
+                const c = getCategoryConfig(place.category);
+                const scale = place.trendScore>90?1.1:place.trendScore>75?1:0.9;
+                const pulse = place.trendScore>80?`<div class="marker-pulse" style="background:${c.color}40;"></div>`:'';
+                const badge = place.trendScore>85?`<div class="marker-trend"><i class="fa-solid fa-arrow-trend-up"></i></div>`:'';
                 const icon = L.divIcon({
-                    className: 'custom-div-icon',
-                    html: `<div class="map-marker" style="transform:scale(${scale});">${pulse}<div class="marker-pin" style="background:${config.color};"><i class="fa-solid ${config.icon} marker-icon"></i></div>${badge}<div class="absolute top-[40px] left-1/2 transform -translate-x-1/2 bg-white px-2 py-0.5 rounded text-xs font-bold shadow whitespace-nowrap text-gray-800">${place.name}</div></div>`,
-                    iconSize: [40,40], iconAnchor: [20,40]
+                    className:'custom-div-icon',
+                    html:`<div class="map-marker" style="transform:scale(${scale});">${pulse}<div class="marker-pin" style="background:${c.color};"><i class="fa-solid ${c.icon} marker-icon"></i></div>${badge}<div class="absolute top-[40px] left-1/2 transform -translate-x-1/2 bg-white px-2 py-0.5 rounded text-xs font-bold shadow whitespace-nowrap text-gray-800">${place.name}</div></div>`,
+                    iconSize:[40,40], iconAnchor:[20,40]
                 });
-                L.marker([place.lat, place.lng], { icon }).addTo(placeMarkersLayer)
-                    .on('click', () => { map.setView([place.lat, place.lng], 16, { animate: true }); openPlaceDetails(place.id); });
+                L.marker([place.lat,place.lng],{icon}).addTo(placeMarkersLayer)
+                    .on('click',()=>{ map.setView([place.lat,place.lng],16,{animate:true}); openPlaceDetails(place.id); });
             });
         }
 
@@ -344,15 +322,19 @@
             });
             const btn = document.getElementById(`filter-${category}`);
             btn.classList.remove('bg-white','text-gray-700','border-gray-200');
-            const dateRow = document.getElementById('date-window-row');
+            const dateRow   = document.getElementById('date-window-row');
+            const sourceRow = document.getElementById('events-source-row');
             closePlaceDetails();
             if (category === 'events') {
                 btn.classList.add('active','bg-pink-600','text-white','border-pink-600');
                 dateRow.classList.remove('hidden'); dateRow.classList.add('flex');
-                loadEventsFromAPI();
+                sourceRow.classList.remove('hidden'); sourceRow.classList.add('flex');
+                changeEventsSource('ticketed');
             } else {
                 btn.classList.add('active','bg-indigo-600','text-white','border-indigo-600');
                 dateRow.classList.add('hidden'); dateRow.classList.remove('flex');
+                sourceRow.classList.add('hidden'); sourceRow.classList.remove('flex');
+                closeWeekendIntel();
                 renderMarkers();
             }
         }
@@ -366,25 +348,59 @@
             const btn = document.getElementById(`dw-${w}`);
             btn.classList.remove('bg-white','text-gray-700','border-gray-200');
             btn.classList.add('active','bg-pink-600','text-white','border-pink-600');
-            closePlaceDetails(); loadEventsFromAPI();
+            closePlaceDetails();
+            if (currentEventsSource === 'ticketed') loadEventsFromAPI();
+        }
+
+        function changeEventsSource(source) {
+            currentEventsSource = source;
+            document.querySelectorAll('.es-btn').forEach(b => {
+                b.classList.remove('active','bg-pink-600','text-white','border-pink-600','bg-indigo-600','border-indigo-600');
+                b.classList.add('bg-white','text-gray-700','border-gray-200');
+            });
+            const btn = document.getElementById(`es-${source}`);
+            btn.classList.remove('bg-white','text-gray-700','border-gray-200');
+            if (source === 'ticketed') {
+                btn.classList.add('active','bg-pink-600','text-white','border-pink-600');
+                closeWeekendIntel();
+                loadEventsFromAPI();
+            } else {
+                btn.classList.add('active','bg-indigo-600','text-white','border-indigo-600');
+                document.getElementById('weekend-intel-panel').classList.add('open');
+                if (!weekendIntelLoaded) loadWeekendIntel();
+            }
+        }
+
+        function closeWeekendIntel() { document.getElementById('weekend-intel-panel').classList.remove('open'); }
+
+        function changeWICity(city) {
+            currentWICity = city;
+            weekendIntelLoaded = false;
+            document.querySelectorAll('.wic-btn').forEach(b => {
+                b.classList.remove('active','bg-indigo-600','text-white','border-indigo-600');
+                b.classList.add('bg-white','text-gray-600','border-gray-200');
+            });
+            const id = 'wic-' + city.toLowerCase().replace(/\s+/g,'').replace(/[^a-z]/g,'');
+            const btn = document.getElementById(id);
+            if (btn) { btn.classList.remove('bg-white','text-gray-600','border-gray-200'); btn.classList.add('active','bg-indigo-600','text-white','border-indigo-600'); }
+            loadWeekendIntel();
         }
 
         function changeVibe(vibe) {
             currentVibe = vibe; closePlaceDetails(); renderMarkers();
-            const labels = { any:'All Vibes', family:'Family-Friendly', date:'Date Night', friends:'Group Outings', solo:'Solo Adventures' };
+            const labels = {any:'All Vibes',family:'Family-Friendly',date:'Date Night',friends:'Group Outings',solo:'Solo Adventures'};
             showToast(`Filtering for: ${labels[vibe]}`);
         }
 
         function openPlaceDetails(id) {
             const place = dynamicPlaces.find(p => p.id === id);
             if (!place) return;
-            const config = getCategoryConfig(place.category);
-            const content = document.getElementById('place-content');
-            content.innerHTML = `
+            const c = getCategoryConfig(place.category);
+            document.getElementById('place-content').innerHTML = `
                 <div class="flex justify-between items-start mb-4">
                     <div>
                         <div class="flex items-center gap-2 mb-1">
-                            <span class="px-2 py-0.5 rounded text-xs font-bold text-white uppercase tracking-wider" style="background-color:${config.color}">${place.category}</span>
+                            <span class="px-2 py-0.5 rounded text-xs font-bold text-white uppercase tracking-wider" style="background-color:${c.color}">${place.category}</span>
                             <span class="text-sm font-medium text-red-500 flex items-center gap-1 bg-red-50 px-2 py-0.5 rounded"><i class="fa-solid fa-fire"></i> Trending</span>
                         </div>
                         <h2 class="text-2xl font-bold text-gray-900 leading-tight">${place.name}</h2>
@@ -400,44 +416,32 @@
                 </div>
                 <div class="bg-indigo-50 border border-indigo-100 rounded-xl p-3 mb-4 flex items-start gap-3">
                     <div class="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 flex-shrink-0 mt-0.5"><i class="fa-solid fa-bolt"></i></div>
-                    <div>
-                        <p class="text-xs font-bold text-indigo-800 uppercase tracking-wide">Why it's trending</p>
-                        <p class="text-sm text-indigo-900 font-medium">${place.trendReason}</p>
-                    </div>
+                    <div><p class="text-xs font-bold text-indigo-800 uppercase tracking-wide">Why it's trending</p><p class="text-sm text-indigo-900 font-medium">${place.trendReason}</p></div>
                 </div>
                 <div class="bg-gradient-to-r from-purple-50 to-fuchsia-50 border border-purple-100 rounded-xl p-3 mb-4 flex items-start gap-3 shadow-sm">
                     <div class="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-fuchsia-500 flex items-center justify-center text-white flex-shrink-0 mt-0.5 shadow-sm"><i class="fa-solid fa-wand-magic-sparkles text-xs"></i></div>
-                    <div class="w-full">
-                        <p class="text-[10px] font-extrabold text-purple-800 uppercase tracking-widest mb-0.5">AI Vibe Check</p>
-                        <p id="ai-vibe-text" class="text-sm text-purple-900 font-medium animate-pulse">Consulting the local AI...</p>
-                    </div>
+                    <div class="w-full"><p class="text-[10px] font-extrabold text-purple-800 uppercase tracking-widest mb-0.5">AI Vibe Check</p><p id="ai-vibe-text" class="text-sm text-purple-900 font-medium animate-pulse">Consulting the local AI...</p></div>
                 </div>
                 <img src="${place.image}" alt="${place.name}" class="w-full h-48 object-cover rounded-xl mb-4 shadow-sm" onerror="this.src='https://placehold.co/600x400/e2e8f0/475569?text=${encodeURIComponent(place.name)}'">
                 <p class="text-gray-700 mb-4 text-sm leading-relaxed">${place.description||place.address}</p>
                 <div class="flex gap-3 mt-auto pb-4">
-                    <a href="https://www.google.com/maps/dir/?api=1&destination=${place.lat},${place.lng}" target="_blank" class="flex-1 bg-indigo-600 text-white py-3 rounded-xl font-bold shadow-md hover:bg-indigo-700 transition flex items-center justify-center gap-2 text-center no-underline">
-                        <i class="fa-solid fa-route"></i> Go Here
-                    </a>
-                    <button onclick="sharePlace('${encodeURIComponent(place.name)}')" class="w-12 h-12 border border-gray-200 text-gray-600 rounded-xl flex items-center justify-center hover:bg-gray-50 transition">
-                        <i class="fa-solid fa-share-nodes"></i>
-                    </button>
+                    <a href="https://www.google.com/maps/dir/?api=1&destination=${place.lat},${place.lng}" target="_blank" class="flex-1 bg-indigo-600 text-white py-3 rounded-xl font-bold shadow-md hover:bg-indigo-700 transition flex items-center justify-center gap-2 text-center no-underline"><i class="fa-solid fa-route"></i> Go Here</a>
+                    <button onclick="sharePlace('${encodeURIComponent(place.name)}')" class="w-12 h-12 border border-gray-200 text-gray-600 rounded-xl flex items-center justify-center hover:bg-gray-50 transition"><i class="fa-solid fa-share-nodes"></i></button>
                 </div>`;
             document.getElementById('sheet-empty-state').classList.add('hidden');
+            const content = document.getElementById('place-content');
             content.classList.remove('hidden'); content.classList.add('flex');
             document.getElementById('place-details-sheet').classList.add('open');
             generateVibeCheck(place);
         }
 
-        function closePlaceDetails() {
-            document.getElementById('place-details-sheet').classList.remove('open');
-        }
+        function closePlaceDetails() { document.getElementById('place-details-sheet').classList.remove('open'); }
 
         function openEventDetails(id) {
             const ev = dynamicEvents.find(e => e.id === id);
             if (!ev) return;
             const C = '#DB2777';
-            const content = document.getElementById('place-content');
-            content.innerHTML = `
+            document.getElementById('place-content').innerHTML = `
                 <div class="flex justify-between items-start mb-4">
                     <div>
                         <div class="flex items-center gap-2 mb-1">
@@ -445,26 +449,17 @@
                             <span class="text-sm font-medium text-pink-600 flex items-center gap-1 bg-pink-50 px-2 py-0.5 rounded"><i class="fa-solid fa-ticket"></i> Event</span>
                         </div>
                         <h2 class="text-2xl font-bold text-gray-900 leading-tight">${ev.name}</h2>
-                        <div class="flex items-center gap-2 mt-1 text-sm text-gray-600">
-                            <i class="fa-solid fa-calendar-day text-pink-500"></i>
-                            <span class="font-bold text-gray-800">${ev.dateLabel}</span>
-                        </div>
+                        <div class="flex items-center gap-2 mt-1 text-sm"><i class="fa-solid fa-calendar-day text-pink-500"></i><span class="font-bold text-gray-800">${ev.dateLabel}</span></div>
                     </div>
                     <button onclick="closePlaceDetails()" class="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center text-gray-500 hover:bg-gray-200"><i class="fa-solid fa-xmark"></i></button>
                 </div>
                 <div class="bg-pink-50 border border-pink-100 rounded-xl p-3 mb-4 flex items-start gap-3">
                     <div class="w-8 h-8 rounded-full bg-pink-100 flex items-center justify-center text-pink-600 flex-shrink-0 mt-0.5"><i class="fa-solid fa-location-dot"></i></div>
-                    <div>
-                        <p class="text-xs font-bold text-pink-800 uppercase tracking-wide">Where</p>
-                        <p class="text-sm text-pink-900 font-medium">${ev.venue}${ev.address?' · '+ev.address:''}</p>
-                    </div>
+                    <div><p class="text-xs font-bold text-pink-800 uppercase tracking-wide">Where</p><p class="text-sm text-pink-900 font-medium">${ev.venue}${ev.address?' · '+ev.address:''}</p></div>
                 </div>
                 <div class="bg-gradient-to-r from-purple-50 to-fuchsia-50 border border-purple-100 rounded-xl p-3 mb-4 flex items-start gap-3 shadow-sm">
                     <div class="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-fuchsia-500 flex items-center justify-center text-white flex-shrink-0 mt-0.5 shadow-sm"><i class="fa-solid fa-wand-magic-sparkles text-xs"></i></div>
-                    <div class="w-full">
-                        <p class="text-[10px] font-extrabold text-purple-800 uppercase tracking-widest mb-0.5">AI Vibe Check</p>
-                        <p id="ai-vibe-text" class="text-sm text-purple-900 font-medium animate-pulse">Consulting the local AI...</p>
-                    </div>
+                    <div class="w-full"><p class="text-[10px] font-extrabold text-purple-800 uppercase tracking-widest mb-0.5">AI Vibe Check</p><p id="ai-vibe-text" class="text-sm text-purple-900 font-medium animate-pulse">Consulting the local AI...</p></div>
                 </div>
                 <img src="${ev.image}" alt="${ev.name}" class="w-full h-48 object-cover rounded-xl mb-4 shadow-sm" onerror="this.src='https://placehold.co/600x400/db2777/ffffff?text=${encodeURIComponent(ev.segment)}'">
                 ${ev.price?`<p class="text-gray-700 mb-4 text-sm"><span class="font-bold">Tickets from</span> ${ev.price}</p>`:''}
@@ -473,18 +468,24 @@
                     <a href="https://www.google.com/maps/dir/?api=1&destination=${ev.lat},${ev.lng}" target="_blank" class="w-12 h-12 border border-gray-200 text-gray-600 rounded-xl flex items-center justify-center hover:bg-gray-50 transition no-underline"><i class="fa-solid fa-route"></i></a>
                 </div>`;
             document.getElementById('sheet-empty-state').classList.add('hidden');
+            const content = document.getElementById('place-content');
             content.classList.remove('hidden'); content.classList.add('flex');
             document.getElementById('place-details-sheet').classList.add('open');
             generateEventVibeCheck(ev);
         }
 
-        async function generateEventVibeCheck(ev) {
+        function sharePlace(encodedName) {
+            if (navigator.share) navigator.share({ title:`Trending: ${decodeURIComponent(encodedName)}`, url: window.location.href });
+            else { navigator.clipboard.writeText(window.location.href); showToast('Link copied!'); }
+        }
+
+        async function generateVibeCheck(place) {
             const el = document.getElementById('ai-vibe-text');
             if (!el) return;
-            const vibeLabels = { any:'Just exploring', date:'Date-night plan', family:'Out with the kids', friends:'Hanging with friends', solo:'Flying solo' };
+            const vibeLabels = {any:'Just exploring',date:'Looking for a date spot',family:'Out with the kids',friends:'Hanging with friends',solo:'Flying solo'};
             const text = await callGemini(
-                `Event: ${ev.name}\nType: ${ev.segment}\nVenue: ${ev.venue}\nWhen: ${ev.dateLabel}\nUser: ${vibeLabels[currentVibe]||'Just exploring'}\n\nGive a punchy 1-2 sentence vibe check with an emoji or two!`,
-                'You are a hip local trend-spotter. Write short, punchy, exciting recommendations.'
+                `Place: ${place.name}\nCategory: ${place.category}\nDescription: ${place.description}\nTrending: ${place.trendReason}\nUser: ${vibeLabels[currentVibe]||'Exploring'}\n\nPunchy 1-2 sentence vibe check with emojis!`,
+                'You are a hip local trend-spotter. Short, punchy, exciting recommendations only.'
             );
             if (document.getElementById('place-details-sheet').classList.contains('open') && document.getElementById('ai-vibe-text')) {
                 el.classList.remove('animate-pulse');
@@ -492,18 +493,13 @@
             }
         }
 
-        function sharePlace(encodedName) {
-            if (navigator.share) { navigator.share({ title:`Trending: ${decodeURIComponent(encodedName)}`, url: window.location.href }); }
-            else { navigator.clipboard.writeText(window.location.href); showToast('Link copied!'); }
-        }
-
-        async function generateVibeCheck(place) {
+        async function generateEventVibeCheck(ev) {
             const el = document.getElementById('ai-vibe-text');
             if (!el) return;
-            const vibeLabels = { any:'Just exploring', date:'Looking for a date spot', family:'Out with the kids', friends:'Hanging with friends', solo:'Flying solo' };
+            const vibeLabels = {any:'Just exploring',date:'Date-night plan',family:'Out with the kids',friends:'Hanging with friends',solo:'Flying solo'};
             const text = await callGemini(
-                `Place: ${place.name}\nCategory: ${place.category}\nDescription: ${place.description}\nTrending because: ${place.trendReason}\nUser: ${vibeLabels[currentVibe]||'Just exploring'}\n\nGive a punchy 1-2 sentence vibe check with an emoji or two!`,
-                'You are a hip local trend-spotter. Write short, punchy, exciting recommendations.'
+                `Event: ${ev.name}\nType: ${ev.segment}\nVenue: ${ev.venue}\nWhen: ${ev.dateLabel}\nUser: ${vibeLabels[currentVibe]||'Exploring'}\n\nPunchy 1-2 sentence vibe check with emojis!`,
+                'You are a hip local trend-spotter. Short, punchy, exciting recommendations only.'
             );
             if (document.getElementById('place-details-sheet').classList.contains('open') && document.getElementById('ai-vibe-text')) {
                 el.classList.remove('animate-pulse');
@@ -520,16 +516,16 @@
             inputEl.value = '';
             appendMessage('user', message);
             const typingId = appendTypingIndicator();
-            let mapContext, systemPrompt;
+            let context, sysPrompt;
             if (currentFilter === 'events') {
-                mapContext = dynamicEvents.length ? dynamicEvents.map(e=>`- ${e.name} (${e.segment}) at ${e.venue}, ${e.dateLabel}`).join('\n') : 'No events on map.';
-                systemPrompt = `You are a helpful AI concierge for a Trending Near Me app. Keep answers short (1–3 sentences). Live events on map:\n\n${mapContext}`;
+                context = dynamicEvents.length ? dynamicEvents.map(e=>`- ${e.name} (${e.segment}) at ${e.venue}, ${e.dateLabel}`).join('\n') : 'No events on map.';
+                sysPrompt = `AI concierge for Trending Near Me app. Short answers (1-3 sentences). Live events:\n\n${context}`;
             } else {
                 const vis = dynamicPlaces.filter(p=>(currentFilter==='all'||p.category===currentFilter)&&(currentVibe==='any'||p.vibes.includes(currentVibe)));
-                mapContext = vis.length ? vis.map(p=>`- ${p.name} (${p.category}, ${p.rating}★): ${p.trendReason}`).join('\n') : 'No places on map.';
-                systemPrompt = `You are a helpful AI concierge for a Trending Near Me app. Keep answers short (1–3 sentences). Live places on map:\n\n${mapContext}`;
+                context = vis.length ? vis.map(p=>`- ${p.name} (${p.category}, ${p.rating}★): ${p.trendReason}`).join('\n') : 'No places on map.';
+                sysPrompt = `AI concierge for Trending Near Me app. Short answers (1-3 sentences). Live places:\n\n${context}`;
             }
-            const responseText = await callGemini(message, systemPrompt);
+            const responseText = await callGemini(message, sysPrompt);
             removeElement(typingId);
             appendMessage('bot', responseText);
         }
@@ -537,9 +533,7 @@
         function appendMessage(sender, text) {
             const msgs = document.getElementById('chat-messages');
             const div = document.createElement('div');
-            div.className = sender==='user'
-                ? 'bg-indigo-600 text-white p-3 rounded-2xl rounded-tr-sm self-end max-w-[85%] shadow-sm'
-                : 'bg-white text-gray-800 border border-gray-200 p-3 rounded-2xl rounded-tl-sm self-start max-w-[90%] shadow-sm';
+            div.className = sender==='user'?'bg-indigo-600 text-white p-3 rounded-2xl rounded-tr-sm self-end max-w-[85%] shadow-sm':'bg-white text-gray-800 border border-gray-200 p-3 rounded-2xl rounded-tl-sm self-start max-w-[90%] shadow-sm';
             div.innerHTML = text.replace(/\*\*(.*?)\*\*/g,'<b class="font-bold">$1</b>');
             msgs.appendChild(div); msgs.scrollTop = msgs.scrollHeight;
         }
@@ -555,64 +549,39 @@
             return id;
         }
 
-        function removeElement(id) { const el = document.getElementById(id); if(el) el.remove(); }
+        function removeElement(id) { const el=document.getElementById(id); if(el) el.remove(); }
 
         async function refreshData() {
             closePlaceDetails();
-            if (currentFilter === 'events') { await loadEventsFromAPI(); showToast('Events refreshed!'); }
-            else { showLoading('Scanning for fresh trends...'); await loadPlacesFromAPI(); hideLoading(); showToast('Trending data refreshed!'); }
-        }
-
-        function showLoading(text) { document.getElementById('loading-text').textContent = text; document.getElementById('loading-overlay').classList.remove('hidden'); }
-        function hideLoading() { document.getElementById('loading-overlay').classList.add('hidden'); }
-
-        function showToast(message) {
-            const toast = document.createElement('div');
-            toast.className = 'absolute top-20 left-1/2 transform -translate-x-1/2 bg-gray-800 text-white px-4 py-2 rounded-full text-sm font-medium shadow-lg ui-layer transition-opacity duration-300 whitespace-nowrap';
-            toast.textContent = message;
-            document.body.appendChild(toast);
-            setTimeout(() => { toast.style.opacity = '0'; }, 2000);
-            setTimeout(() => { toast.remove(); }, 2300);
-        }
-
-        // ─── Weekend Intel ────────────────────────────────────────────────────────
-        let weekendIntelLoaded = false;
-
-        function toggleWeekendIntel() {
-            const panel = document.getElementById('weekend-intel-panel');
-            const isOpen = panel.classList.contains('open');
-            closePlaceDetails();
-            if (isOpen) { panel.classList.remove('open'); }
-          else { panel.classList.add('open'); if (!weekendIntelLoaded) loadWeekendIntel(); }
-        }
-
-        function changeWICity(city) {
-            currentWICity = city;
-            document.querySelectorAll('.wic-btn').forEach(b => {
-                b.classList.remove('active', 'bg-indigo-600', 'text-white', 'border-indigo-600');
-                b.classList.add('bg-white', 'text-gray-600', 'border-gray-200');
-            });
-            const id = 'wic-' + city.toLowerCase().replace(/\s+/g, '');
-            const btn = document.getElementById(id);
-            if (btn) { btn.classList.remove('bg-white','text-gray-600','border-gray-200'); btn.classList.add('active','bg-indigo-600','text-white','border-indigo-600'); }
-            weekendIntelLoaded = false;
-            loadWeekendIntel();
+            if (currentFilter==='events') {
+                if (currentEventsSource==='ai') { weekendIntelLoaded=false; loadWeekendIntel(); }
+                else { await loadEventsFromAPI(); showToast('Events refreshed!'); }
+            } else {
+                showLoading('Scanning for fresh trends...');
+                await loadPlacesFromAPI();
+                hideLoading();
+                showToast('Trending data refreshed!');
+            }
         }
 
         async function loadWeekendIntel() {
             const content  = document.getElementById('weekend-content');
             const subtitle = document.getElementById('weekend-subtitle');
             weekendIntelLoaded = false;
-            content.innerHTML = `<div class="flex flex-col items-center justify-center py-10 gap-3 text-gray-400"><div class="w-8 h-8 border-4 border-indigo-200 border-t-indigo-500 rounded-full animate-spin"></div><p class="animate-pulse text-center text-sm">Scanning local listings, socials &amp; city pages…</p></div>`;
+            content.innerHTML = `
+                <div class="flex flex-col items-center justify-center py-10 gap-3 text-gray-400">
+                    <div class="w-8 h-8 border-4 border-indigo-200 border-t-indigo-500 rounded-full animate-spin"></div>
+                    <p class="animate-pulse text-center text-sm">Searching uitagenda, Eventbrite NL, local sites…<br>Takes ~10 seconds</p>
+                </div>`;
             try {
                 const res = await fetch('/api/weekend', {
-                    method: 'POST', headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ lat: userCoords.lat, lng: userCoords.lng, city: currentWICity })
+                    method: 'POST', headers: {'Content-Type':'application/json'},
+                    body: JSON.stringify({ city: currentWICity })
                 });
                 if (!res.ok) throw new Error();
                 const data = await res.json();
-                subtitle.textContent = data.weekend || 'This weekend';
-                const html = (data.intel || 'Nothing found.')
+                subtitle.textContent = `${data.city} · ${data.weekend||'This weekend'}`;
+                const html = (data.intel||'Nothing found.')
                     .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
                     .replace(/\*(.*?)\*/g, '<em>$1</em>')
                     .split('\n').map(l=>l.trim()).filter(Boolean)
@@ -620,8 +589,24 @@
                 content.innerHTML = html;
                 weekendIntelLoaded = true;
             } catch {
-                content.innerHTML = `<div class="flex flex-col items-center justify-center py-10 gap-2 text-gray-400"><i class="fa-solid fa-wifi-slash text-2xl"></i><p class="text-center text-sm">Couldn't load weekend intel.<br>Try again.</p><button onclick="loadWeekendIntel()" class="mt-2 px-4 py-2 bg-indigo-600 text-white rounded-full text-xs font-bold hover:bg-indigo-700 transition">Try Again</button></div>`;
+                content.innerHTML = `
+                    <div class="flex flex-col items-center justify-center py-10 gap-2 text-gray-400">
+                        <i class="fa-solid fa-wifi-slash text-2xl"></i>
+                        <p class="text-center text-sm">Couldn't load intel. Try again.</p>
+                        <button onclick="loadWeekendIntel()" class="mt-2 px-4 py-2 bg-indigo-600 text-white rounded-full text-xs font-bold hover:bg-indigo-700 transition">Try Again</button>
+                    </div>`;
             }
+        }
+
+        function showLoading(text) { document.getElementById('loading-text').textContent=text; document.getElementById('loading-overlay').classList.remove('hidden'); }
+        function hideLoading() { document.getElementById('loading-overlay').classList.add('hidden'); }
+        function showToast(message) {
+            const toast = document.createElement('div');
+            toast.className = 'absolute top-20 left-1/2 transform -translate-x-1/2 bg-gray-800 text-white px-4 py-2 rounded-full text-sm font-medium shadow-lg ui-layer transition-opacity duration-300 whitespace-nowrap';
+            toast.textContent = message;
+            document.body.appendChild(toast);
+            setTimeout(()=>{toast.style.opacity='0';},2000);
+            setTimeout(()=>{toast.remove();},2300);
         }
     </script>
 </body>
