@@ -18,30 +18,40 @@ export default async function handler(req, res) {
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'POST')   return res.status(405).json({ error: 'Method not allowed' });
 
-  const { lat, lng } = req.body;
+  const { city = 'The Hague' } = req.body;
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) return res.status(500).json({ error: 'Gemini API key not configured' });
 
   const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
   const weekend = getWeekendDates(new Date());
 
-  const prompt = `You are a local events scout for the area around ${lat}, ${lng} — this is the Voorburg / The Hague area in the Netherlands.
+  const prompt = `You are a local events scout for ${city}, Netherlands.
 
-Search the web for what is happening THIS WEEKEND (${weekend}) in this area. Focus specifically on things NOT on major ticketing sites:
+Search the web RIGHT NOW for events and activities happening THIS WEEKEND (${weekend}) in ${city}. 
+
+Look for ALL of these types of things:
 - Local markets, flea markets, farmers markets, Sunday markets
-- Pop-up events, temporary exhibitions, art openings
-- Neighbourhood festivals or street parties
-- Café and bar special events (live music, DJ nights, quiz nights, tastings)
-- Community events, charity events
-- Outdoor activities, park events, sports events
-- Food events, workshops, classes
+- Pop-up events, temporary exhibitions, art openings, gallery events
+- Neighbourhood festivals, street parties, fairs
+- Live music events, DJ nights, concerts (including free ones)
+- Theatre, comedy, dance performances
+- Café and bar special events, quiz nights, tastings, workshops
+- Community events, sports events, outdoor activities
+- Food festivals, food truck events
+- Family-friendly events, kids activities
+- Club nights, cultural events
 
-Be specific: include real names, real locations, and times where you found them. Format your response as a clean list using emoji bullets (🎪 for festivals, 🎵 for music, 🛍️ for markets, 🍽️ for food, 🎨 for art, etc). Keep each item to 2-3 lines. Aim for 6-10 items. Start directly with the list — no intro sentence needed.`;
+Search in Dutch too (e.g. "weekend ${city} activiteiten", "${city} evenementen dit weekend", "uitagenda ${city}").
+
+Be specific: use real names, real venues, real times. Format as a clean emoji-bulleted list:
+🎵 for music, 🛍️ for markets, 🎨 for art, 🍽️ for food, 🎪 for festivals, 🎭 for theatre, 🏃 for sports, 🎉 for parties.
+
+Each item: bold name, then venue and time on the next line. Aim for 8-12 items. No intro text — start the list immediately.`;
 
   const payload = {
     contents: [{ parts: [{ text: prompt }] }],
     tools: [{ google_search: {} }],
-    generationConfig: { maxOutputTokens: 1000, temperature: 0.7 }
+    generationConfig: { maxOutputTokens: 1500, temperature: 0.7 }
   };
 
   try {
@@ -55,8 +65,9 @@ Be specific: include real names, real locations, and times where you found them.
       return res.status(502).json({ error: 'Gemini API error', details: errData });
     }
     const result = await response.json();
-    const intel = result.candidates?.[0]?.content?.parts?.[0]?.text || 'Nothing found for this weekend.';
-    return res.status(200).json({ intel, weekend });
+    const intel = result.candidates?.[0]?.content?.parts?.[0]?.text
+      || 'Nothing found for this weekend — try a different city or check back later.';
+    return res.status(200).json({ intel, weekend, city });
   } catch (error) {
     console.error('Weekend intel error:', error);
     return res.status(500).json({ error: 'Internal server error' });
