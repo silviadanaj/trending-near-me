@@ -600,7 +600,14 @@
                     </div>`;
             }
         }
-
+function getThisWeekendDate() {
+    const now = new Date();
+    const day = now.getDay();
+    const daysToFri = day <= 5 ? (5 - day) : 0;
+    const fri = new Date(now);
+    fri.setDate(now.getDate() + daysToFri);
+    return fri.toISOString().split('T')[0];
+}
         function showLoading(text) { document.getElementById('loading-text').textContent=text; document.getElementById('loading-overlay').classList.remove('hidden'); }
         function hideLoading() { document.getElementById('loading-overlay').classList.add('hidden'); }
         function showToast(message) {
